@@ -58,8 +58,13 @@ Cue now pins `d1ee8a67c22d2aecc5ff4ec2d8f3408eb6c166a8` through a real public
 Git dependency. Its complete proof gate passed, including two exact OTP 29.0.2
 exports, emitted-syntax correspondence, 241 batch differential cases, and an
 allowlisted final axiom audit. Its full Agent Loop application suite passed
-1763 tests with 2 existing skips and 42 excluded live-LLM cases. Retained TLC
-validation and the integration pull request remain pending. The library's
+1763 tests with 2 existing skips and 42 excluded live-LLM cases. All 65 retained
+TLC configurations produced their expected outcomes, including 42 deliberate
+violations. The production integration is open as
+[Cue PR #1581](https://github.com/AFK-surf/Cue/pull/1581). Cue's tracker records
+the exact theorem domains, synchronous-adapter obligations, reference abstraction,
+and unchanged durable protocol mappings. No whole-actor, compiler, storage,
+or global-liveness proof is claimed. The library's
 hosted full suite also passed at this pin:
 [run 34349033714](https://github.com/AFK-surf/erlean/actions/runs/34349033714).
 
