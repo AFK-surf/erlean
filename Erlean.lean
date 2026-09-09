@@ -4,6 +4,9 @@ import Erlean.Core.Checks
 import Erlean.Core.Environment
 import Erlean.Import.Lower
 import Erlean.Semantics.Machine
+import Erlean.Semantics.Preservation
+import Erlean.Semantics.VariableSafety
+import Erlean.Logic.Segment
 import Erlean.Semantics.Observation
 import Erlean.Logic.ObservableContract
 import Erlean.Examples.Identity
@@ -12,6 +15,7 @@ import Erlean.Examples.Reverse
 import Erlean.Examples.HigherOrder
 import Erlean.Examples.Modular
 import Erlean.Examples.ByteCodec
+import Erlean.Examples.Protocol
 
 /-!
 # erlean

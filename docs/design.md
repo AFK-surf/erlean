@@ -20,12 +20,12 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current checkpoint: byte codec and replayable actor runtime (2026-09-09)
+### Current checkpoint: lexical preservation and protocol proof rules (2026-09-09)
 
 | Milestone | Status | Evidence / remaining work |
 | --- | --- | --- |
 | M0: reproducible input | Complete for the fixture profile | Reproducible real imports from all three languages, manifests, inventories, and rejection diagnostics pass. |
-| M1: sequential verification | In progress | Imported reversal, higher-order identity-map, and byte codec proved; full lexical preservation remains open. |
+| M1: sequential verification | Complete for the restricted profile | Imported reversal, higher-order identity-map, byte codec, runner correspondence, and full local lexical preservation are proved. General maps/bitstrings and stacktraces remain excluded. |
 | M2: modular proofs | Complete for tail delegation | Real imported client reuses a dependency contract in an explicit linked world; arbitrary continuation lifting remains future work. |
 | M3: actor verification | In progress | Explicit runtime requests, FIFO signals, selective receive, deadlines, monitor/link lifecycle, and replay execute; all-schedule protocol invariant remains open. |
 
@@ -173,7 +173,18 @@ serialized through the primary agent.
   it is a debugging strategy, not an assumption silently imported into proofs.
 - `Erlean.Core.Environment` proves lookup/key correspondence, environment extension,
   parameter-zip coverage under arity agreement, and successful-pattern coverage.
-  These are preservation prerequisites, not a full machine preservation theorem.
+- `stepLocal_preserves_lexical_scope` now covers every local control/frame branch
+  under an immutable checked code world. The invariant uses static scopes covered
+  by dynamic environments, including saved frames and finite closure descriptors.
+  `runLocal_preserves_lexical_scope` lifts it through every finite successful prefix;
+  `initialCall_reachable_variable_not_unbound` excludes the unbound-variable fault
+  when the next expression is a variable. This is lexical availability, not general
+  fault freedom, dynamic arity correctness, or an OTP translation theorem.
+- Protocol proof rules connect accepted choices to replay, prove FIFO eligibility
+  of delivered signals, and link the actual imported server/client handlers to
+  exact reference/payload-preserving send and return prefixes. Generic pure-segment
+  boundary lemmas hide intermediate Core frames without assuming protocol safety.
+  The complete closed-exchange phase simulation remains open.
 - Machine regressions check multiple values, invalid arities/scope, guard fallback,
   unsupported faults, fuel resumption, and bounded stack use for tail calls.
 - Scope and pattern checks cover integers, atoms, lists, tuples, alias bindings,
@@ -184,17 +195,17 @@ serialized through the primary agent.
   expose class/reason only; handlers are implemented but stack inspection is not.
 - Unknown BIFs, unlinked dependencies, and other unsupported operations report
   model faults. Generated `module_info` calls remain visible obligations.
-- No full OTP compatibility or completed M1/M3 claim is made. Full state
-  preservation and the all-schedule protocol invariant remain open; the implemented
-  recursive contracts and bounded actor evidence are scoped as listed above.
+- No full OTP compatibility or completed M3 claim is made. Local lexical
+  preservation is proved; actor structural invariants and the all-schedule protocol
+  invariant remain separate obligations. Implemented contracts are scoped above.
 
 ### Next work
 
-1. Compose lexical frame/environment rules into full `stepLocal` preservation
-   under a checked code world. Pending drafts are not validated evidence.
-2. Relate actual imported server/client control states to protocol phases and
+1. Relate actual imported server/client control states to protocol phases and
    prove a request/reply invariant over every accepted system schedule. Replay,
    FIFO eligibility, and isolated handler lemmas alone do not meet this criterion.
+2. Prove actor mailbox cursor bounds for arbitrary successful system transitions.
+   Pending proof drafts are not validated evidence.
 3. State fairness/delivery and timing assumptions explicitly for any progress
    theorem; no liveness theorem currently follows from the executable scheduler.
 4. Generalize tail-delegation rules to arbitrary continuations when a client
@@ -214,9 +225,12 @@ serialized through the primary agent.
   and 50 differential cases; full bounded suite passed and commit was pushed.
 - `b659a78`: higher-order map, exception observation boundaries, linked dependency
   reuse, and 71 differential cases; full suite passed and commit was pushed.
-- Current checkpoint: imported byte-codec contracts and explicit actor runtime,
+- `b55fddc`: imported byte-codec contracts and explicit actor runtime,
   including lifecycle signals, 91 sequential cases and 17 actor scenarios. The
-  carrying commit records the revision and validated checks.
+  complete bounded suite passed and the commit was pushed.
+- Current checkpoint: full local lexical preservation, reachable variable safety,
+  and imported protocol-handler/pure-segment proof rules. The carrying commit
+  records the revision and validated checks.
 
 ## 1. Purpose and success criteria
 

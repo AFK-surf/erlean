@@ -11,7 +11,8 @@ Captured closures, recursive groups, and class/reason exception handlers execute
 The byte codec has a bounded-input round-trip proof. The restricted actor runtime
 supports explicit scheduling, signal delivery, receive, monitor/link lifecycle,
 and replay. Tests include 91 sequential cases and 17 actor scenarios against OTP;
-full preservation and schedule-independent protocol proofs remain in progress.
+local lexical preservation is proved. Schedule-independent protocol proofs remain
+in progress; testing is compatibility evidence, not OTP equivalence.
 
 See the [design document](docs/design.md) for the architecture, trust boundary,
 verification interfaces, and implementation milestones.
