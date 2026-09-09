@@ -1,0 +1,58 @@
+import Erlean.Core.Maps
+import Erlean.Semantics.Machine
+
+namespace Erlean.Semantics
+
+open Core
+
+/-- Open-input rewrite rules for map execution. These rules retain canonical
+    public-map premises and do not assume function equality. -/
+theorem withMap_public (state : LocalState) (entries : FiniteMap.Entries Value)
+    (body : FiniteMap.Entries Value → Transition LocalState Outcome)
+    (publicMap : (Value.map entries).isPublic = true) :
+    withMap state (.map entries) body = body entries := by
+  have parts : Value.mapOrdered entries = true ∧ Value.publicEntries entries = true := by
+    simpa only [Value.isPublic, Bool.and_eq_true] using publicMap
+  simp [withMap, parts.1, parts.2]
+
+theorem withMapKey_supported (key : MapKey)
+    (body : MapKey → Transition LocalState Outcome) :
+    withMapKey key.toValue body = body key := by
+  simp [withMapKey, MapKey.toValue_toMapKey]
+
+theorem mapBuiltin_get (state : LocalState) (key : MapKey)
+    (entries : FiniteMap.Entries Value)
+    (publicMap : (Value.map entries).isPublic = true) :
+    mapBuiltin state "get" [key.toValue, .map entries] =
+      match FiniteMap.lookup key entries with
+      | some value => nextControl state (.ret [value])
+      | none => raiseError state (.tuple [.atom "badkey", key.toValue]) := by
+  simp [mapBuiltin, Value.publicList, publicMap, MapKey.toValue_public,
+    withMap_public state entries _ publicMap, withMapKey_supported]
+  rfl
+
+theorem mapBuiltin_get_default (state : LocalState) (key : MapKey)
+    (entries : FiniteMap.Entries Value) (default : Value)
+    (publicMap : (Value.map entries).isPublic = true) (defaultPublic : default.isPublic = true) :
+    mapBuiltin state "get" [key.toValue, .map entries, default] =
+      nextControl state (.ret [(FiniteMap.lookup key entries).getD default]) := by
+  simp [mapBuiltin, Value.publicList, publicMap, defaultPublic, MapKey.toValue_public,
+    withMap_public state entries _ publicMap, withMapKey_supported]
+
+theorem mapBuiltin_put (state : LocalState) (key : MapKey) (value : Value)
+    (entries : FiniteMap.Entries Value)
+    (publicMap : (Value.map entries).isPublic = true) (valuePublic : value.isPublic = true) :
+    mapBuiltin state "put" [key.toValue, value, .map entries] =
+      nextControl state (.ret [.map (FiniteMap.insert key value entries)]) := by
+  simp [mapBuiltin, Value.publicList, publicMap, valuePublic, MapKey.toValue_public,
+    withMap_public state entries _ publicMap, withMapKey_supported]
+
+theorem mapBuiltin_remove (state : LocalState) (key : MapKey)
+    (entries : FiniteMap.Entries Value)
+    (publicMap : (Value.map entries).isPublic = true) :
+    mapBuiltin state "remove" [key.toValue, .map entries] =
+      nextControl state (.ret [.map (FiniteMap.erase key entries)]) := by
+  simp [mapBuiltin, Value.publicList, publicMap, MapKey.toValue_public,
+    withMap_public state entries _ publicMap, withMapKey_supported]
+
+end Erlean.Semantics

@@ -1,5 +1,6 @@
 import Erlean.Import.RawCore
 import Erlean.Core.Scope
+import Erlean.Core.FiniteMap
 
 namespace Erlean.Import
 
@@ -54,7 +55,34 @@ def lowerValue : Nat → Term → Except String Value
       return items.foldr Value.cons (← lowerValue fuel tail)
     | .float _ => throw "Unsupported literal: float"
     | .bitstring bits hex => lowerBitstring bits hex
-    | .map _ => throw "Unsupported literal: map"
+    | .map entries =>
+      let entries ← entries.mapM fun (key, value) => do
+        let key ← lowerValue fuel key
+        let some key := key.toMapKey
+          | throw "Unsupported map key: expected an exact data key (no float, function, or map keys)"
+        return (key, ← lowerValue fuel value)
+      return .map (entries.foldl (fun acc entry => FiniteMap.insert entry.1 entry.2 acc) [])
+
+/-- Preserve the compiler's map-pair order and explicit update mode. -/
+private def mapPair : Term → Except String (Bool × Term × Term)
+  | .tuple [.atom "c_map_pair", _, operation, key, value] => do
+    let exact ← match ← literal operation with
+      | .atom "assoc" => pure false
+      | .atom "exact" => pure true
+      | _ => throw "Malformed map operation: expected assoc or exact"
+    return (exact, key, value)
+  | _ => .error "Malformed map pair: expected a c_map_pair record"
+
+private def mapPatternPairs (base pairs : Term) : Except String (List (Term × Term)) := do
+  unless (← literal base) == .map [] do
+    throw "Unsupported map pattern base: expected an empty literal map"
+  (← properList pairs).mapM fun pair => do
+    let (exact, key, value) ← mapPair pair
+    unless exact do throw "Malformed map pattern: expected exact pairs"
+    let key ← match key with
+      | .tuple [.atom "c_literal", _, key] => pure key
+      | _ => throw "Unsupported map pattern key: only literal keys are supported"
+    return (key, value)
 
 abbrev NameScope := List (Term × VarId)
 
@@ -105,6 +133,9 @@ private def patternNames : Nat → Term → Except String (List Term)
       return (← patternNames fuel head) ++ (← patternNames fuel tail)
     | .tuple [.atom "c_tuple", _, items] =>
       return (← (← properList items).mapM (patternNames fuel)).flatten
+    | .tuple [.atom "c_map", _, base, pairs, .atom "true"] =>
+      let pairs ← mapPatternPairs base pairs
+      return (← pairs.mapM (fun pair => patternNames fuel pair.2)).flatten
     | .tuple [.atom "c_binary", _, segments] =>
       let values ← (← properList segments).mapM bytePatternSegmentValue
       return (← values.mapM (patternNames fuel)).flatten
@@ -122,6 +153,14 @@ private def lowerPattern : Nat → NameScope → Term → Except String Pattern
       return .cons (← lowerPattern fuel scope head) (← lowerPattern fuel scope tail)
     | .tuple [.atom "c_tuple", _, items] =>
       return .tuple (← (← properList items).mapM (lowerPattern fuel scope))
+    | .tuple [.atom "c_map", _, base, pairs, .atom "true"] =>
+      let pairs ← mapPatternPairs base pairs
+      let lowered ← pairs.mapM fun (key, value) => do
+        let key ← lowerValue fuel key
+        let some key := key.toMapKey
+          | throw "Unsupported map pattern key: expected an exact data key (no float, function, or map keys)"
+        return (key, ← lowerPattern fuel scope value)
+      return .map (lowered.map Prod.fst) (lowered.map Prod.snd)
     | .tuple [.atom "c_binary", _, segments] =>
       let values ← (← properList segments).mapM bytePatternSegmentValue
       return .bytes (← values.mapM (lowerPattern fuel scope))
@@ -189,6 +228,12 @@ private def lowerExprM : Nat → NameScope → Term → LowerM Expr
       return .values (← (← properList items).mapM (lowerExprM fuel scope))
     | .tuple [.atom "c_tuple", _, items] =>
       return .tuple (← (← properList items).mapM (lowerExprM fuel scope))
+    | .tuple [.atom "c_map", _, base, pairs, .atom "false"] =>
+      let pairs ← (← properList pairs).mapM (fun pair => do pure (← mapPair pair))
+      let base ← lowerExprM fuel scope base
+      let operands ← pairs.mapM fun (_, key, value) => do
+        return [← lowerExprM fuel scope key, ← lowerExprM fuel scope value]
+      return .map (pairs.map Prod.fst) (base :: operands.flatten)
     | .tuple [.atom "c_binary", _, segments] =>
       let values ← (← properList segments).mapM (fun segment => do pure (← byteSegmentValue segment))
       return .bytes (← values.mapM (lowerExprM fuel scope))

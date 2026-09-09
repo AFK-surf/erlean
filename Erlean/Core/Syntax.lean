@@ -1,3 +1,5 @@
+import Erlean.Core.FiniteMap
+
 namespace Erlean.Core
 
 abbrev VarId := Nat
@@ -10,6 +12,9 @@ inductive Value where
   | nil
   | cons (head tail : Value)
   | tuple (elements : List Value)
+  /-- Canonical finite maps. Public maps have strictly ordered, unique data keys.
+      Function, float, and map keys are outside the initial map profile. -/
+  | map (entries : List (MapKey × Value))
   /-- Canonical bits shared by literals and supported binary operations. -/
   | bitstring (bits : List Bool)
   | pid (id : Nat)
@@ -32,6 +37,7 @@ def Value.equal (left right : Value) : Bool :=
   | .nil, .nil => true
   | .cons a b, .cons c d => a.equal c && b.equal d
   | .tuple xs, .tuple ys => Value.equalList xs ys
+  | .map xs, .map ys => Value.equalEntries xs ys
   | .bitstring xs, .bitstring ys => xs == ys
   | .pid a, .pid b => a == b
   | .reference a, .reference b => a == b
@@ -56,9 +62,58 @@ def Value.equalEnv (left right : List (VarId × Value)) : Bool :=
     id == other && value.equal rhs && Value.equalEnv rest remaining
   | _, _ => false
 termination_by sizeOf left
+
+def Value.equalEntries (left right : List (MapKey × Value)) : Bool :=
+  match left, right with
+  | [], [] => true
+  | (key, value) :: rest, (other, rhs) :: tail =>
+    key == other && value.equal rhs && Value.equalEntries rest tail
+  | _, _ => false
+termination_by sizeOf left
 end
 
 instance : BEq Value := ⟨Value.equal⟩
+
+def Value.mapOrdered (entries : List (MapKey × Value)) : Bool :=
+  decide (FiniteMap.Sorted entries)
+
+mutual
+/-- Decode supported exact map keys without assigning identities to functions. -/
+def Value.toMapKey : Value → Option MapKey
+  | .integer n => some (.integer n)
+  | .atom name => some (.atom name)
+  | .nil => some .nil
+  | .cons head tail => return .cons (← head.toMapKey) (← tail.toMapKey)
+  | .tuple values => return .tuple (← Value.toMapKeys values)
+  | .bitstring bits => some (.bitstring bits)
+  | .pid id => some (.pid id)
+  | .reference id => some (.reference id)
+  | _ => none
+termination_by value => sizeOf value
+
+def Value.toMapKeys : List Value → Option (List MapKey)
+  | [] => some []
+  | value :: rest => return (← value.toMapKey) :: (← Value.toMapKeys rest)
+termination_by values => sizeOf values
+end
+
+mutual
+def MapKey.toValue : MapKey → Value
+  | .integer n => .integer n
+  | .atom name => .atom name
+  | .nil => .nil
+  | .cons head tail => .cons head.toValue tail.toValue
+  | .tuple values => .tuple (MapKey.toValues values)
+  | .bitstring bits => .bitstring bits
+  | .pid id => .pid id
+  | .reference id => .reference id
+termination_by key => sizeOf key
+
+def MapKey.toValues : List MapKey → List Value
+  | [] => []
+  | key :: rest => key.toValue :: MapKey.toValues rest
+termination_by keys => sizeOf keys
+end
 
 mutual
 /-- Public data excludes internal exception information. Closure environments
@@ -68,7 +123,15 @@ def Value.isPublic (value : Value) : Bool :=
   | .exceptionInfo _ => false
   | .cons head tail => head.isPublic && tail.isPublic
   | .tuple values => Value.publicList values
-  | _ => true
+  | .map entries => Value.mapOrdered entries && Value.publicEntries entries
+  | .integer _ => true
+  | .atom _ => true
+  | .nil => true
+  | .bitstring _ => true
+  | .pid _ => true
+  | .reference _ => true
+  | .function _ _ _ => true
+  | .closure _ _ _ _ => true
 termination_by sizeOf value
 
 def Value.publicList (values : List Value) : Bool :=
@@ -76,6 +139,12 @@ def Value.publicList (values : List Value) : Bool :=
   | [] => true
   | value :: rest => value.isPublic && Value.publicList rest
 termination_by sizeOf values
+
+def Value.publicEntries (entries : List (MapKey × Value)) : Bool :=
+  match entries with
+  | [] => true
+  | (_, value) :: rest => value.isPublic && Value.publicEntries rest
+termination_by sizeOf entries
 end
 
 mutual
@@ -85,7 +154,13 @@ def Value.exactComparable (value : Value) : Bool :=
   | .exceptionInfo _ | .function _ _ _ | .closure _ _ _ _ => false
   | .cons head tail => head.exactComparable && tail.exactComparable
   | .tuple values => Value.comparableList values
-  | _ => true
+  | .map entries => Value.mapOrdered entries && Value.comparableEntries entries
+  | .integer _ => true
+  | .atom _ => true
+  | .nil => true
+  | .bitstring _ => true
+  | .pid _ => true
+  | .reference _ => true
 termination_by sizeOf value
 
 def Value.comparableList (values : List Value) : Bool :=
@@ -93,6 +168,12 @@ def Value.comparableList (values : List Value) : Bool :=
   | [] => true
   | value :: rest => value.exactComparable && Value.comparableList rest
 termination_by sizeOf values
+
+def Value.comparableEntries (entries : List (MapKey × Value)) : Bool :=
+  match entries with
+  | [] => true
+  | (_, value) :: rest => value.exactComparable && Value.comparableEntries rest
+termination_by sizeOf entries
 end
 
 /-- Core multiple returns are not Erlang tuple values. -/
@@ -126,6 +207,8 @@ inductive Pattern where
   | lit (value : Value)
   | cons (head tail : Pattern)
   | tuple (elements : List Pattern)
+  /-- Literal-key subset matching. Extra entries are allowed. -/
+  | map (keys : List MapKey) (values : List Pattern)
   /-- Exact sequence of unsigned eight-bit integer segment patterns. -/
   | bytes (elements : List Pattern)
   deriving Repr, BEq
@@ -140,6 +223,8 @@ inductive Expr where
   | seq (first second : Expr)
   | cons (head tail : Expr)
   | tuple (elements : List Expr)
+  /-- Base followed by key/value operands. True operations are exact updates. -/
+  | map (exact : List Bool) (operands : List Expr)
   /-- Ordered unsigned eight-bit integer segment construction. -/
   | bytes (elements : List Expr)
   | call (moduleName functionName : Expr) (arguments : List Expr)

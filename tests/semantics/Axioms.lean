@@ -9,6 +9,8 @@ import Erlean.Examples.ByteCodec.Contract
 import Erlean.Examples.Protocol.Basic
 import Erlean.Semantics.Preservation
 import Erlean.Semantics.VariableSafety
+import Erlean.Core.Maps
+import Erlean.Semantics.Maps
 import Erlean.Logic.Segment
 import Erlean.Runtime.Invariants
 import Erlean.Runtime.SignalBounds
@@ -49,6 +51,21 @@ import Erlean.Examples.Dijkstra.Correctness
 #print axioms Erlean.Examples.Dijkstra.dijkstra_terminates_correct
 #print axioms Erlean.Examples.Dijkstra.dijkstra_total_correct
 #print axioms Erlean.Core.Value.equal_eq_true
+#print axioms Erlean.Core.MapKey.code_injective
+#print axioms Erlean.Core.MapKey.before_trans
+#print axioms Erlean.Core.MapKey.before_trichotomy
+#print axioms Erlean.Core.FiniteMap.lookup_insert
+#print axioms Erlean.Core.FiniteMap.lookup_erase
+#print axioms Erlean.Core.FiniteMap.sorted_insert
+#print axioms Erlean.Core.FiniteMap.sorted_erase
+#print axioms Erlean.Core.FiniteMap.ext_sorted
+#print axioms Erlean.Core.MapKey.toValue_toMapKey
+#print axioms Erlean.Core.Value.map_equal_iff_lookup
+#print axioms Erlean.Core.Value.map_insert_public
+#print axioms Erlean.Core.Value.map_erase_public
+#print axioms Erlean.Semantics.mapBuiltin_put
+#print axioms Erlean.Semantics.mapBuiltin_get
+#print axioms Erlean.Semantics.mapBuiltin_remove
 #print axioms Erlean.Core.Value.public_of_exactComparable
 #print axioms Erlean.Logic.Controller.Trace.safe
 #print axioms Erlean.Logic.Controller.Trace.exact

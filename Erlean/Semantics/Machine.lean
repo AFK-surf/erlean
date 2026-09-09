@@ -1,4 +1,5 @@
 import Erlean.Core.Syntax
+import Erlean.Core.FiniteMap
 import Erlean.Core.Match
 import Erlean.Core.PatternObservation
 import Erlean.Semantics.Execution
@@ -47,6 +48,7 @@ structure Context where
 inductive Collect where
   | values | tuple | bytes | cons | call | apply
   | primop (name : String)
+  | map (exact : List Bool)
   deriving Repr, BEq
 
 inductive Frame where
@@ -90,42 +92,206 @@ def raiseError (state : LocalState) (reason : Value) :
 
 def boolean (value : Bool) : Value := .atom (if value then "true" else "false")
 
+/-- Apply already evaluated pairs in the selected Core pair order. The collector
+    evaluates every operand first; finishMap separately excludes ambiguous OTP
+    failure ordering before this helper runs. -/
+def updateMapEntries (state : LocalState) : List Bool → Values →
+    FiniteMap.Entries Value → Transition LocalState Outcome
+  | [], [], entries => nextControl state (.ret [.map entries])
+  | exact :: rest, key :: value :: operands, entries =>
+    match key.toMapKey with
+    | none => unsupported "Map key outside the finite key profile"
+    | some mapKey =>
+      if !value.isPublic then unsupported "Opaque or malformed map value"
+      else if exact && (FiniteMap.lookup mapKey entries).isNone then
+        raiseError state (.tuple [.atom "badkey", key])
+      else updateMapEntries state rest operands (FiniteMap.insert mapKey value entries)
+  | _, _, _ => invalid "Malformed Core map operand arity"
+
+/-- Count distinct exact keys missing at their first write, using a shadow map
+    that inserts even failing updates. OTP may reorder literal-key groups; more
+    than one missing key would make the observable badkey reason ambiguous.
+    Unsupported keys and malformed arities remain the execution helper's faults. -/
+def missingExactKeys : List Bool → Values → FiniteMap.Entries Value → Nat
+  | exact :: rest, key :: value :: operands, entries =>
+    match key.toMapKey with
+    | none => missingExactKeys rest operands entries
+    | some mapKey =>
+      (if exact && (FiniteMap.lookup mapKey entries).isNone then 1 else 0) +
+        missingExactKeys rest operands (FiniteMap.insert mapKey value entries)
+  | _, _, _ => 0
+
+def finishMap (state : LocalState) (exact : List Bool) (operands : Values) :
+    Transition LocalState Outcome :=
+  match operands with
+  | .map entries :: pairs =>
+    if !Value.mapOrdered entries then invalid "Noncanonical finite map"
+    else if !Value.publicEntries entries then unsupported "Opaque or malformed map value"
+    else if missingExactKeys exact pairs entries > 1 then
+      unsupported "Ambiguous exact-map update failure"
+    else updateMapEntries state exact pairs entries
+  | base :: _ =>
+    if !base.isPublic then unsupported "Opaque or malformed map base"
+    else raiseError state (.tuple [.atom "badmap", base])
+  | [] => invalid "Core map requires a base operand"
+
+/-- Shared checked map operand boundary. These are model faults, not invented
+    Erlang exceptions, when an input lies outside the implemented profile. -/
+def withMap (state : LocalState) (value : Value)
+    (body : FiniteMap.Entries Value → Transition LocalState Outcome) :
+    Transition LocalState Outcome :=
+  match value with
+  | .map entries =>
+    if !Value.mapOrdered entries then invalid "Noncanonical finite map"
+    else if !Value.publicEntries entries then unsupported "Opaque or malformed map value"
+    else body entries
+  | _ =>
+    if !value.isPublic then unsupported "Opaque or malformed map operand"
+    else raiseError state (.tuple [.atom "badmap", value])
+
+def withMapKey (key : Value) (body : MapKey → Transition LocalState Outcome) :
+    Transition LocalState Outcome :=
+  match key.toMapKey with
+  | some mapKey => body mapKey
+  | none => unsupported "Map key outside the finite key profile"
+
+/-- The finite maps module profile. Values may contain functions; only keys are
+    restricted by conversion to MapKey. The right map wins during merge. -/
+def mapBuiltin (state : LocalState) (name : String) (args : Values) :
+    Transition LocalState Outcome :=
+  let ret (value : Value) := nextControl state (.ret [value])
+  if !Value.publicList args then unsupported "Opaque or malformed maps argument"
+  else match name, args with
+  | "get", [key, map] => withMap state map fun entries => withMapKey key fun mapKey =>
+    match FiniteMap.lookup mapKey entries with
+    | some value => ret value
+    | none => raiseError state (.tuple [.atom "badkey", key])
+  | "get", [key, map, default] => withMap state map fun entries => withMapKey key fun mapKey =>
+    ret ((FiniteMap.lookup mapKey entries).getD default)
+  | "find", [key, map] => withMap state map fun entries => withMapKey key fun mapKey =>
+    match FiniteMap.lookup mapKey entries with
+    | some value => ret (.tuple [.atom "ok", value])
+    | none => ret (.atom "error")
+  | "is_key", [key, map] => withMap state map fun entries => withMapKey key fun mapKey =>
+    ret (boolean (FiniteMap.lookup mapKey entries).isSome)
+  | "put", [key, value, map] => withMap state map fun entries => withMapKey key fun mapKey =>
+    ret (.map (FiniteMap.insert mapKey value entries))
+  | "update", [key, value, map] => withMap state map fun entries => withMapKey key fun mapKey =>
+    if (FiniteMap.lookup mapKey entries).isSome then
+      ret (.map (FiniteMap.insert mapKey value entries))
+    else raiseError state (.tuple [.atom "badkey", key])
+  | "remove", [key, map] => withMap state map fun entries => withMapKey key fun mapKey =>
+    ret (.map (FiniteMap.erase mapKey entries))
+  | "take", [key, map] => withMap state map fun entries => withMapKey key fun mapKey =>
+    match FiniteMap.lookup mapKey entries with
+    | some value => ret (.tuple [value, .map (FiniteMap.erase mapKey entries)])
+    | none => ret (.atom "error")
+  | "merge", [left, right] => withMap state left fun leftEntries =>
+    withMap state right fun rightEntries =>
+      ret (.map (rightEntries.foldl (fun entries pair =>
+        FiniteMap.insert pair.1 pair.2 entries) leftEntries))
+  | _, _ => unsupported s!"BIF maps:{name}/{args.length}"
+
 /-- Explicit, intentionally small BIF profile. Other BIFs are model faults. -/
 def builtin (state : LocalState) (name : String) (args : Values) :
     Transition LocalState Outcome :=
   let ret (value : Value) := nextControl state (.ret [value])
   let badarg := raiseError state (.atom "badarg")
   let badarith := raiseError state (.atom "badarith")
+  let unknown := unsupported s!"BIF erlang:{name}/{args.length}"
   if !Value.publicList args then unsupported "BIF observation of opaque exception information"
-  else match name, args with
-  | "self", [] | "make_ref", [] | "spawn", [_, _, _]
-  | "send", [_, _] | "monitor", [_, _] | "demonitor", [_]
-  | "link", [_] | "unlink", [_] | "exit", [_, _] =>
-    nextControl state (.runtime name args)
-  | "!", [_, _] => nextControl state (.runtime "send" args)
-  | "+", [.integer a, .integer b] => ret (.integer (a + b))
-  | "-", [.integer a, .integer b] => ret (.integer (a - b))
-  | "*", [.integer a, .integer b] => ret (.integer (a * b))
-  | "=<", [.integer a, .integer b] => ret (boolean (decide (a ≤ b)))
-  | "=:=", [a, b] =>
-    if a.exactComparable && b.exactComparable then ret (boolean (a == b))
-    else unsupported "Exact equality involving function identity or exception information"
-  | "and", [.atom a, .atom b] =>
-    if (a == "true" || a == "false") && (b == "true" || b == "false") then
-      ret (boolean (a == "true" && b == "true"))
-    else badarg
-  | "and", [_, _] => badarg
-  | "+", [_, _] | "-", [_, _] | "*", [_, _] => badarith
-  | "is_integer", [v] => ret (boolean (match v with | .integer _ => true | _ => false))
-  | "is_atom", [v] => ret (boolean (match v with | .atom _ => true | _ => false))
-  | "is_tuple", [v] => ret (boolean (match v with | .tuple _ => true | _ => false))
-  | "hd", [.cons h _] => ret h
-  | "tl", [.cons _ t] => ret t
-  | "hd", [_] | "tl", [_] => badarg
-  | "error", [reason] => nextControl state (.raise ⟨.error, reason⟩)
-  | "exit", [reason] => nextControl state (.raise ⟨.exit, reason⟩)
-  | "throw", [reason] => nextControl state (.raise ⟨.throw, reason⟩)
-  | _, _ => unsupported s!"BIF erlang:{name}/{args.length}"
+  else match name with
+  | "self" | "make_ref" => match args with
+    | [] => nextControl state (.runtime name args)
+    | _ => unknown
+  | "spawn" => match args with
+    | [_, _, _] => nextControl state (.runtime name args)
+    | _ => unknown
+  | "send" | "monitor" => match args with
+    | [_, _] => nextControl state (.runtime name args)
+    | _ => unknown
+  | "demonitor" | "link" | "unlink" => match args with
+    | [_] => nextControl state (.runtime name args)
+    | _ => unknown
+  | "!" => match args with
+    | [_, _] => nextControl state (.runtime "send" args)
+    | _ => unknown
+  | "+" => match args with
+    | [.integer a, .integer b] => ret (.integer (a + b))
+    | [_, _] => badarith
+    | _ => unknown
+  | "-" => match args with
+    | [.integer a, .integer b] => ret (.integer (a - b))
+    | [_, _] => badarith
+    | _ => unknown
+  | "*" => match args with
+    | [.integer a, .integer b] => ret (.integer (a * b))
+    | [_, _] => badarith
+    | _ => unknown
+  | "=<" => match args with
+    | [.integer a, .integer b] => ret (boolean (decide (a ≤ b)))
+    | _ => unknown
+  | "=:=" | "==" => match args with
+    | [a, b] =>
+      if a.exactComparable && b.exactComparable then ret (boolean (a == b))
+      else unsupported "Exact equality involving function identity or exception information"
+    | _ => unknown
+  | "=/=" | "/=" => match args with
+    | [a, b] =>
+      if a.exactComparable && b.exactComparable then ret (boolean (!(a == b)))
+      else unsupported "Equality involving function identity or exception information"
+    | _ => unknown
+  | "and" => match args with
+    | [.atom a, .atom b] =>
+      if (a == "true" || a == "false") && (b == "true" || b == "false") then
+        ret (boolean (a == "true" && b == "true"))
+      else badarg
+    | [_, _] => badarg
+    | _ => unknown
+  | "is_integer" => match args with
+    | [v] => ret (boolean (match v with | .integer _ => true | _ => false))
+    | _ => unknown
+  | "is_atom" => match args with
+    | [v] => ret (boolean (match v with | .atom _ => true | _ => false))
+    | _ => unknown
+  | "is_tuple" => match args with
+    | [v] => ret (boolean (match v with | .tuple _ => true | _ => false))
+    | _ => unknown
+  | "is_map" => match args with
+    | [v] => ret (boolean (match v with | .map _ => true | _ => false))
+    | _ => unknown
+  | "is_binary" => match args with
+    | [v] => ret (boolean (match v with
+        | .bitstring bits => bits.length % 8 == 0 | _ => false))
+    | _ => unknown
+  | "map_size" => match args with
+    | [v] => withMap state v fun entries => ret (.integer (Int.ofNat entries.length))
+    | _ => unknown
+  | "map_get" => match args with
+    | [key, map] => mapBuiltin state "get" [key, map]
+    | _ => unknown
+  | "is_map_key" => match args with
+    | [key, map] => mapBuiltin state "is_key" [key, map]
+    | _ => unknown
+  | "hd" => match args with
+    | [.cons head _] => ret head
+    | [_] => badarg
+    | _ => unknown
+  | "tl" => match args with
+    | [.cons _ tail] => ret tail
+    | [_] => badarg
+    | _ => unknown
+  | "error" => match args with
+    | [reason] => nextControl state (.raise ⟨.error, reason⟩)
+    | _ => unknown
+  | "exit" => match args with
+    | [reason] => nextControl state (.raise ⟨.exit, reason⟩)
+    | [_, _] => nextControl state (.runtime name args)
+    | _ => unknown
+  | "throw" => match args with
+    | [reason] => nextControl state (.raise ⟨.throw, reason⟩)
+    | _ => unknown
+  | _ => unknown
 
 def lookupFunction (world : CodeWorld) (moduleName name : String) (arity : Nat) :
     Option FunctionDef := do
@@ -135,6 +301,7 @@ def lookupFunction (world : CodeWorld) (moduleName name : String) (arity : Nat) 
 def invoke (world : CodeWorld) (state : LocalState) (moduleName name : String)
     (args : Values) (external : Bool) : Transition LocalState Outcome :=
   if moduleName == "erlang" then builtin state name args
+  else if moduleName == "maps" then mapBuiltin state name args
   else
     match world.find? (fun m => m.name == moduleName) with
     | none => unsupported s!"unlinked module {moduleName}"
@@ -185,6 +352,7 @@ def finishCollect (world : CodeWorld) (state : LocalState) (action : Collect)
   match action, values with
   | .values, _ => nextControl state (.ret values)
   | .tuple, _ => nextControl state (.ret [.tuple values])
+  | .map exact, _ => finishMap state exact values
   | .bytes, _ =>
     match encodeByteValues values with
     | some bits => nextControl state (.ret [.bitstring bits])
@@ -247,6 +415,7 @@ def stepLocal (world : CodeWorld) (state : LocalState) : Transition LocalState O
           context := { state.context with env := env ++ state.context.env } }
     | .values elements => startCollect world state .values elements
     | .tuple elements => startCollect world state .tuple elements
+    | .map exact operands => startCollect world state (.map exact) operands
     | .bytes elements => startCollect world state .bytes elements
     | .cons head tail => startCollect world state .cons [head, tail]
     | .call mod name args => startCollect world state .call (mod :: name :: args)

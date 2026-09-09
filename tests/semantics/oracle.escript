@@ -41,6 +41,8 @@ decode(#{<<"tag">> := <<"bitstring">>, <<"bits">> := Count, <<"hex">> := Hex}) -
     Bits;
 decode(#{<<"tag">> := <<"tuple">>, <<"items">> := Items}) ->
     list_to_tuple([decode(X) || X <- Items]);
+decode(#{<<"tag">> := <<"map">>, <<"entries">> := Entries}) ->
+    maps:from_list([{decode(K), decode(V)} || [K, V] <- Entries]);
 decode(#{<<"tag">> := <<"list">>, <<"items">> := Items, <<"tail">> := Tail}) ->
     lists:foldr(fun(X, Acc) -> [decode(X) | Acc] end, decode(Tail), Items).
 
@@ -49,6 +51,8 @@ encode(X) when is_atom(X) -> #{tag => atom, value => atom_to_binary(X)};
 encode([]) -> #{tag => nil};
 encode([H | T]) -> #{tag => cons, head => encode(H), tail => encode(T)};
 encode(X) when is_tuple(X) -> #{tag => tuple, items => [encode(V) || V <- tuple_to_list(X)]};
+encode(X) when is_map(X) ->
+    #{tag => map, entries => [[encode(K), encode(V)] || {K, V} <- maps:to_list(X)]};
 encode(X) when is_bitstring(X) ->
     N = bit_size(X), Pad = (8 - N rem 8) rem 8,
     #{tag => bitstring, bits => integer_to_binary(N),

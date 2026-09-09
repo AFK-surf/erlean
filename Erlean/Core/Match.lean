@@ -3,6 +3,11 @@ import Erlean.Core.Bytes
 
 namespace Erlean.Core
 
+/-- Select literal map keys without inspecting any stored value. Duplicate
+    pattern keys select the same field again; extra map entries are ignored. -/
+def selectMapValues (keys : List MapKey) (entries : List (MapKey × Value)) : Option Values :=
+  keys.mapM (fun key => FiniteMap.lookup key entries)
+
 mutual
 /-- Matching for linear, fresh patterns accepted by the scope checker.
     Literal comparison is restricted to the initial value profile. -/
@@ -19,6 +24,10 @@ def matchPattern (pattern : Pattern) (value : Value) : Option Env :=
       let tailEnv ← matchPattern tail rest
       pure (headEnv ++ tailEnv)
   | .tuple patterns, .tuple values => matchPatterns patterns values
+  | .map keys patterns, .map entries => do
+      if !Value.mapOrdered entries then none else do
+        let values ← selectMapValues keys entries
+        matchPatterns patterns values
   | .bytes patterns, .bitstring bits => do
       let values ← decodeByteValues patterns.length bits
       matchPatterns patterns values
@@ -109,6 +118,14 @@ theorem matchPattern_keys (pattern : Pattern) (value : Value) (env : Env)
   | .tuple patterns, .tuple values =>
       simpa [Pattern.binders] using
         matchPatterns_keys patterns values env (by simpa [matchPattern] using h)
+  | .map keys patterns, .map entries =>
+      by_cases ordered : Value.mapOrdered entries = true
+      · cases selected : selectMapValues keys entries with
+        | none => simp [matchPattern, ordered, selected] at h
+        | some values =>
+          simpa [Pattern.binders] using
+            matchPatterns_keys patterns values env (by simpa [matchPattern, ordered, selected] using h)
+      · simp [matchPattern, ordered] at h
   | .bytes patterns, .bitstring bits =>
       cases hd : decodeByteValues patterns.length bits with
       | none => simp [matchPattern, hd] at h
@@ -129,6 +146,11 @@ theorem matchPattern_keys (pattern : Pattern) (value : Value) (env : Env)
   | .tuple _, .cons _ _ | .tuple _, .bitstring _ | .tuple _, .function _ _ _ =>
       simp [matchPattern] at h
   | .tuple _, .closure _ _ _ _ | .tuple _, .exceptionInfo _ => simp [matchPattern] at h
+  | .cons _ _, .map _ | .tuple _, .map _ | .bytes _, .map _
+  | .map _ _, .integer _ | .map _ _, .atom _ | .map _ _, .nil
+  | .map _ _, .cons _ _ | .map _ _, .tuple _ | .map _ _, .bitstring _
+  | .map _ _, .pid _ | .map _ _, .reference _ | .map _ _, .function _ _ _
+  | .map _ _, .closure _ _ _ _ | .map _ _, .exceptionInfo _ => simp [matchPattern] at h
 termination_by sizeOf pattern
 
 theorem matchPatterns_keys (patterns : List Pattern) (values : Values) (env : Env)

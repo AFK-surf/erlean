@@ -48,6 +48,49 @@ def main : IO Unit := do
   expectError (lowerExpr 64 [] (record "c_primop"
     [record "c_literal" [.atom "recv_marker_reserve"], .nil])) "unsupported later-stage primop"
   let literal := fun value => record "c_literal" [value]
+  let mapEntries : List (Term × Term) := [(.atom "b", .integer 2), (.atom "a", .integer 1)]
+  let canonicalMap := Value.map
+    (FiniteMap.insert (.atom "a") (.integer 1)
+      (FiniteMap.insert (.atom "b") (.integer 2) []))
+  assertTrue (isOkEq (lowerValue 64 (.map mapEntries)) canonicalMap &&
+    isOkEq (lowerValue 64 (.map mapEntries.reverse)) canonicalMap)
+    "map literal order is canonical"
+  assertTrue canonicalMap.isPublic "canonical map literal is public"
+  assertTrue (isOkEq (lowerValue 64 (.map [(.atom "a", .integer 0), (.atom "a", .integer 1)]))
+    (.map [(.atom "a", .integer 1)])) "duplicate literal map keys overwrite earlier entries"
+  assertTrue (isOkEq (lowerValue 64 (.map [(.atom "nested", .map mapEntries)]))
+    (.map [(.atom "nested", canonicalMap)])) "nested map values remain supported"
+  for key in [Term.map [], .float "3ff0000000000000", .tuple [.map []]] do
+    expectError (lowerValue 64 (.map [(key, .nil)])) "unsupported literal map key"
+  let mapPair := fun operation key value => record "c_map_pair" [literal operation, key, value]
+  let mapExpr := fun pairs => record "c_map" [literal (.map []), .list pairs .nil, .atom "false"]
+  assertTrue (isOkEq (lowerExpr 64 [] (mapExpr
+    [mapPair (.atom "assoc") (literal (.atom "a")) (literal (.integer 1)),
+     mapPair (.atom "exact") (literal (.atom "a")) (literal (.integer 2))]))
+    (.map [false, true] [.lit (.map []), .lit (.atom "a"), .lit (.integer 1),
+      .lit (.atom "a"), .lit (.integer 2)])) "map operand and update-mode order"
+  expectError (lowerExpr 64 [] (mapExpr
+    [mapPair (.atom "unknown") (literal (.atom "a")) (literal .nil)])) "unknown map update mode"
+  expectError (lowerExpr 64 [] (mapExpr [record "c_map_pair" []])) "malformed map pair"
+  let mapPattern := fun base pairs => record "c_map" [base, .list pairs .nil, .atom "true"]
+  let patternCase := fun pattern => record "c_case" [literal (.map []),
+    .list [record "c_clause" [.list [pattern] .nil, literal (.atom "true"), literal (.atom "ok")]] .nil]
+  assertTrue (isOkEq (lowerExpr 64 [] (patternCase (mapPattern (literal (.map [])) [])))
+    (.caseE (.lit (.map [])) [([.map [] []], .lit (.atom "true"), .lit (.atom "ok"))]))
+    "empty map pattern lowers to subset matching, not literal equality"
+  let patternBinder := record "c_var" [.atom "value"]
+  assertTrue (isOkEq (lowerExpr 64 [] (patternCase (mapPattern (literal (.map []))
+    [mapPair (.atom "exact") (literal (.atom "a")) patternBinder])))
+    (.caseE (.lit (.map [])) [([.map [.atom "a"] [.var 0]],
+      .lit (.atom "true"), .lit (.atom "ok"))])) "map value pattern binders are resolved"
+  for key in [record "c_var" [.atom "key"], literal (.map []),
+      literal (.float "3ff0000000000000"), record "c_literal" []] do
+    expectError (lowerExpr 64 [(.atom "key", 0)] (patternCase (mapPattern (literal (.map []))
+      [mapPair (.atom "exact") key patternBinder]))) "unsupported or malformed map pattern key"
+  expectError (lowerExpr 64 [] (patternCase (mapPattern (literal (.map mapEntries)) [])))
+    "nonempty map pattern base"
+  expectError (lowerExpr 64 [] (patternCase (mapPattern (literal (.map []))
+    [mapPair (.atom "assoc") (literal (.atom "a")) patternBinder]))) "associative map pattern pair"
   let flags := Term.list [.atom "unsigned", .atom "big"] .nil
   let segment := fun size unit kind options => record "c_bitstr"
     [literal (.integer 42), size, literal unit, literal kind, literal options]

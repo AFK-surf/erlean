@@ -20,13 +20,12 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current work: finite maps for the verified Session kernel
+### Current work: finite maps and payload transport
 
-The next objective is a production-used verified Session reducer, starting with
-durable async-call lifecycle fields. First add the generic map semantics that
-this reducer needs. Then record the complete kernel boundary and migration plan
-in Cue, and implement the first real State-authority slice in Cue PR #1581.
-Do not claim that the first slice verifies the complete Session lifecycle.
+The next objective is reusable finite-map semantics and proof tools for pure
+state reducers. Add canonical data keys, map operations, import support, and
+arbitrary-input contracts. Keep downstream designs, application migrations,
+and integration progress outside this upstream repository.
 
 The initial map profile uses sorted, unique entries with a separate recursive
 data-key type. Canonical order is internal, not Erlang term or iteration order.
@@ -36,11 +35,15 @@ contain nested maps. Function values remain transportable but not comparable.
 Every import and update must preserve canonical form. Equality reflection must
 agree with finite-map lookup semantics, not the order of input entries.
 
+The executable representation uses lists, not an OTP hash-map implementation.
+Canonicality checks use pairwise key ordering and can take quadratic time.
+Publicness checks traverse contained values. No OTP-like complexity claim applies.
+
 Add map literals, associative and exact updates, literal-key map patterns, and
 the required direct map BIFs. Bound-variable map patterns and map iteration are
 outside this first profile. Preserve pinned Core operand evaluation order and
 distinguish `badmap`, `badkey`, and unsupported model operations. Upstream fixtures
-use asdf OTP 29.0.6. Cue artifacts retain asdf OTP 29.0.2 and exact provenance.
+use asdf OTP 29.0.6. The separate OTP 29.0.2 import profile retains exact provenance.
 Use [OTP map expressions](https://www.erlang.org/doc/system/expressions.html#map-expressions)
 and the installed pinned compiler source as the semantic references.
 
@@ -61,36 +64,64 @@ and execution machine have compiled. Full regression validation remains pending.
 Checkpoint: the independent `Core.MapKey` and `Core.FiniteMap` modules passed
 serial compilation and a focused axiom audit. Their laws use only `propext`,
 `Classical.choice`, and `Quot.sound`. This foundation checkpoint does not enable
-map execution by itself. Syntax integration, execution regressions, and Cue work
-remain in progress. Existing Dijkstra stepping proofs need a bounded proof-cost
-repair after the value-type extension. No theorem statement or memory cap changes.
+map execution by itself. Syntax integration and execution regressions
+remain in progress. The original Dijkstra stepping proofs now pass without
+changes to their statements, scripts, or budgets. Name-first BIF dispatch avoids
+the large joint name/argument matcher that exhausted proof simplification.
+Map execution and lexical preservation also compiled with the default proof
+budget. No memory cap or build-script changes were required.
+
+Recovery checkpoint: the user reported another OOM kill. The interrupted CLI
+build has no confirmed completion and must be rerun. Retain all source changes.
+At recovery, the host had about 16 GiB available and no active Lean build.
+Before interruption, two `leanchecker` processes used about 5.6 and 4.6 GiB RSS.
+Their ownership and connection to the OOM are not established. Kernel logs were
+not accessible, so these observations do not identify the cause. Run subsequent
+builds only through `node tools/build.mjs`, serially through the primary agent,
+with one Lean worker and the existing 2 GiB compiler cap. Check host memory and
+active processes before each verification phase. Subagents must not run builds
+or test suites. Do not count interrupted checks as passing results.
+
+The first recovery build stopped at ordinary Lean errors in the independent
+float helper, before CLI validation. The parser safety proof now reduces its
+local binding before splitting. Closed parser examples use definitional
+equality instead of requiring an `Except` equality decision instance. These
+edits remain unvalidated. A subsequent resource check found several concurrent
+Rust linkers and elevated memory pressure. Defer the next compilation while
+that pressure persists. Do not terminate processes with unconfirmed ownership.
+
+Validated checkpoint: the CLI uses mutually recursive value and entry encoders
+with kernel-checked termination. The full `node tools/check_all.mjs` suite passed
+after recovery. This includes importer and map boundary checks, the axiom audit,
+106 map cases against OTP 29.0.6, 91 existing sequential cases, 17 actor scenarios,
+and all 28 graph/input checks. Fresh map exports match the retained artifacts.
+The axiom audit admits only the existing standard kernel axioms. Testing remains
+compatibility evidence, not a universal equivalence proof.
+
+Next: add finite-float transport for ordinary data payloads. The independent
+float codec helper compiled, but execution integration and fixture validation
+remain pending. Keep application-specific operations and proof obligations in
+their owning repositories.
 
 Subagents author key/map algebra and compatibility fixtures. The primary agent
 owns machine/importer integration and all serial builds and tests. Build scripts
-stay unchanged. Inventory is complete for the first slice. Implementation,
-preservation proofs, compatibility checks, and Cue design publication remain pending.
+stay unchanged. The finite-map implementation and compatibility checks are complete.
 
-### Previous work: Cue controller verification support (2026-09-09)
+### Previous work: reusable controller verification support (2026-09-09)
 
 The current cleanup moves all-trace exactness into `Controller.Trace.exact`.
 Every related concrete step must match the deterministic model's state and
 complete ordered effect list. Trace existence remains a separate obligation.
-Cue will reuse this rule in both controller proofs and remove three unused
-auxiliary lemmas. Production semantics and build logic stay unchanged.
+The rule replaces repeated all-trace induction in compiled controller proofs.
+Execution semantics and build logic stay unchanged.
 The full serialized suite passed, including empty-trace and ordered multi-effect
-regressions. The new theorem depends only on `propext`. Cue now pins
-`17e8be102cd8d5b4018ef821bedc57bbdfa1662d` and its full proof-package check passed,
-including 241 OTP comparisons and the final axiom audit. Both compiled controller
-proofs reuse the theorem. Three unused Cue lemmas are removed. Build scripts
-remain unchanged at the user's request.
+regressions. The new theorem depends only on `propext`. The library checkpoint
+is `17e8be102cd8d5b4018ef821bedc57bbdfa1662d`. Build scripts remain unchanged.
 
-Cue will consume Erlean through a pinned Git dependency to prove its production
-Agent Loop kernel. Add explicit OTP `29.0.2` import support alongside the existing
+The importer supports an explicit OTP `29.0.2` profile alongside the existing
 `29.0.6` fixture profile. Export requires the exact selected runtime patch and
 never relabels another patch. The default toolchain and fixtures stay unchanged.
-The actual Cue kernel exports and lowers under asdf OTP `29.0.2` without rejected
-functions. Its control data needs only existing tuple, atom, reference, and
-integer operations. No business-specific semantic rule is added.
+No business-specific semantic rule is added.
 
 New comparable-data equality reflection and finite controller trace lemmas have
 passed the serialized Lean build. Function identity remains unsupported. Trace
@@ -100,12 +131,9 @@ liveness. The full regression suite and axiom audit passed, including 91
 sequential differential cases, 17 actor scenarios, and 28 graph/input checks.
 The new lemmas use only standard kernel axioms. Re-exported fixture manifests
 refresh exporter provenance without changing Core literals. Explicit profile
-selection and rejection of unsupported or mismatched patches pass. Next, pin
-this library checkpoint in Cue and check its universal compiled-controller proofs.
-The Cue plan and production adapter obligations live in that repository at
-`docs/salix/agent-loop-kernel-verification.md`.
+selection and rejection of unsupported or mismatched patches pass.
 
-Cue's differential gate needs repeated calls against one large imported module.
+Repeated differential calls should not import the same large module each time.
 The generic `run-batch` CLI imports once and evaluates independent cases with a
 per-case fuel budget. It publishes one ordered result array only after every
 case succeeds. Raised Erlang exceptions remain observable results. Model faults,
@@ -113,28 +141,14 @@ malformed cases, and exhaustion fail without partial standard output. This is a
 runner optimization, not a semantic extension. The full serialized suite passed,
 including batch ordering, raised outcomes, malformed input, late model faults,
 and per-case exhaustion with atomic output. The original single-call CLI checks
-and all artifact, differential, and theorem checks still pass. Cue's Round,
-Dependency, Ownership, and Policy modules have passed kernel checking.
+and all artifact, differential, and theorem checks still pass.
 
-At the initial integration checkpoint, Cue pinned `d1ee8a67c22d2aecc5ff4ec2d8f3408eb6c166a8` through a real public
-Git dependency. Its complete proof gate passed, including two exact OTP 29.0.2
-exports, emitted-syntax correspondence, 241 batch differential cases, and an
-allowlisted final axiom audit. Its full Agent Loop application suite passed
-1763 tests with 2 existing skips and 42 excluded live-LLM cases. All 65 retained
-TLC configurations produced their expected outcomes, including 42 deliberate
-violations. The production integration is open as
-[Cue PR #1581](https://github.com/AFK-surf/Cue/pull/1581). Cue's tracker records
-the exact theorem domains, synchronous-adapter obligations, reference abstraction,
-and unchanged durable protocol mappings. No whole-actor, compiler, storage,
-or global-liveness proof is claimed. The library's
-hosted full suite also passed at this pin:
+The library's hosted full suite passed at the initial reusable-tools checkpoint:
 [run 34349033714](https://github.com/AFK-surf/erlean/actions/runs/34349033714).
 
-Cue's round and dependency trace-existence proofs now call
-`Controller.trace_of_refinement` instead of repeating the finite-trace induction.
-They retain their separate all-execution exactness and safety theorems. The full
-Cue proof gate passed again with the existing equality helpers and batch runner.
-No production source, artifact, theorem statement, or dependency pin changed.
+`Controller.trace_of_refinement` supplies trace existence from one-step
+refinement. All-execution exactness and safety remain separate obligations.
+No whole-actor, compiler, storage, or global-liveness proof is claimed.
 
 ### Previous checkpoint: GitHub Actions verification (2026-09-09)
 

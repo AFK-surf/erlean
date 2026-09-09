@@ -16,7 +16,7 @@ def Pattern.binders : Pattern → List VarId
   | .var id => [id]
   | .alias id pattern => id :: pattern.binders
   | .cons head tail => head.binders ++ tail.binders
-  | .tuple elements | .bytes elements => elements.flatMap Pattern.binders
+  | .tuple elements | .bytes elements | .map _ elements => elements.flatMap Pattern.binders
 
 mutual
 /-- Check lexical scope without assigning dynamic Core result arities. -/
@@ -33,7 +33,7 @@ def scopeCheck (scope : List VarId) (expr : Expr) : Bool :=
         scopeCheck scope argument && scopeCheck (binders ++ scope) body &&
         scopeCheck (exceptionBinders ++ scope) handler
   | .catchE body => scopeCheck scope body
-  | .values elements | .tuple elements | .bytes elements => scopeCheckList scope elements
+  | .values elements | .tuple elements | .bytes elements | .map _ elements => scopeCheckList scope elements
   | .letE binders argument body =>
       freshBinders scope binders && scopeCheck scope argument &&
         scopeCheck (binders ++ scope) body
@@ -115,7 +115,7 @@ def closureRefsCheck (code : List ClosureDef) (scope : List VarId) (expr : Expr)
       | none => false
       | some defn => defn.recursiveBindings == bindings && defn.outerScope.all scope.contains) &&
       closureRefsCheck code (bindings.map Prod.fst ++ scope) body
-  | .values xs | .tuple xs | .bytes xs => closureRefsList code scope xs
+  | .values xs | .tuple xs | .bytes xs | .map _ xs => closureRefsList code scope xs
   | .tryE argument binders body exceptionBinders handler =>
     closureRefsCheck code scope argument && closureRefsCheck code (binders ++ scope) body &&
       closureRefsCheck code (exceptionBinders ++ scope) handler

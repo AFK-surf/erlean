@@ -26,6 +26,7 @@ const fixtures = [
   'tests/fixtures/erlang/actor_protocol',
   'tests/fixtures/erlang/actor_lifecycle',
   'tests/fixtures/erlang/dijkstra',
+  'tests/fixtures/erlang/maps',
   'tests/fixtures/elixir/identity',
   'tests/fixtures/gleam/identity',
 ];
@@ -38,12 +39,14 @@ run('OTP extraction and lossless transport', 'node', ['tools/check_export.mjs'])
 run('Elixir/Gleam compiler adapters and reproducibility', 'node', ['tools/check_languages.mjs']);
 run('Lean machine regression checks', 'lake', ['env', 'lean', '-j1', '-M2048', '--run', 'tests/semantics/Regression.lean']);
 run('exception and observation boundary checks', 'lake', ['env', 'lean', '-j1', '-M2048', '--run', 'tests/semantics/ExceptionChecks.lean']);
+run('map representation and observation boundary checks', 'lake', ['env', 'lean', '-j1', '-M2048', '--run', 'tests/semantics/MapChecks.lean']);
 run('actor scheduling and lifecycle regressions', 'lake', ['env', 'lean', '-j1', '-M2048', '--run', 'tests/semantics/ActorChecks.lean']);
 const axioms = run('kernel theorem axiom audit', 'lake',
   ['env', 'lean', '-j1', '-M2048', 'tests/semantics/Axioms.lean']);
 assert.doesNotMatch(axioms, /sorryAx|ofReduceBool|native_decide|Lean\.ofReduce/);
 run('OTP differential checks and explicit model failures', 'node', ['tools/check_semantics.mjs']);
 run('batch execution and atomic failure reporting', 'node', ['tools/check_batch.mjs']);
+run('OTP finite-map compatibility and error ordering', 'node', ['tools/check_maps.mjs']);
 run('OTP actor differential scenarios', 'node', ['tools/check_actors.mjs']);
 run('Dijkstra OTP and independent shortest-path checks', 'node', ['tools/check_dijkstra.mjs']);
 

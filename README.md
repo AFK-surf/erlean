@@ -8,6 +8,11 @@ The initial slice imports real modules from all three languages, proves their
 identity functions for arbitrary modeled values, proves list reversal and a
 higher-order map example, and reuses a dependency contract across linked modules.
 Captured closures, recursive groups, and class/reason exception handlers execute.
+Finite maps support data keys, nested values, updates, literal-key subset patterns,
+and direct lookup/update BIFs. Reusable proofs cover canonical form, lookup frame
+rules, public-value preservation, and extensional equality. See the
+[map profile](docs/otp29-import.md#manifest-and-inventory) for unsupported keys
+and exact-update failure restrictions.
 The byte codec has a bounded-input round-trip proof. The restricted actor runtime
 supports explicit scheduling, signal delivery, receive, monitor/link lifecycle,
 and replay. Tests include 91 sequential cases and 17 actor scenarios against OTP;

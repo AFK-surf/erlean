@@ -3,6 +3,8 @@
 - Write all repository content in English, including documentation, code comments,
   identifiers, test descriptions, and commit messages, regardless of the language
   used in conversation.
+- Keep this upstream repository application-independent. Do not name downstream
+  projects or record their designs, pull requests, or implementation progress here.
 - Target Erlang/OTP 29. Record the exact OTP patch version and compiler options
   for imported artifacts and compatibility tests.
 - Manage OTP installations with asdf and honor the repository `.tool-versions`.

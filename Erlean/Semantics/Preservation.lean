@@ -512,14 +512,114 @@ theorem step_letrec_preserves (world : CodeWorld) (context : Context)
   rw [← stateEq]
   exact ⟨⟨_, Env.covers_append _ _ _ _ newCovered covered, bodyChecked⟩, before.frames⟩
 
+theorem updateMapEntries_preserves (state after : LocalState) (exact : List Bool)
+    (operands : Values) (entries : FiniteMap.Entries Value)
+    (frames : StackScoped state.stack)
+    (transition : updateMapEntries state exact operands entries = .next after) :
+    LexicallyScoped after := by
+  induction exact generalizing operands entries with
+  | nil =>
+    cases operands with
+    | nil => exact nextControl_preserves state after _ frames transition trivial
+    | cons _ _ => simp [updateMapEntries, invalid] at transition
+  | cons flag rest ih =>
+    cases operands with
+    | nil => simp [updateMapEntries, invalid] at transition
+    | cons key operands =>
+      cases operands with
+      | nil => simp [updateMapEntries, invalid] at transition
+      | cons value operands =>
+        simp only [updateMapEntries] at transition
+        repeat' first
+          | exact nextControl_preserves state after _ frames transition trivial
+          | exact ih _ _ transition
+          | solve | simp [unsupported] at transition
+          | split at transition
+
+theorem finishMap_preserves (state after : LocalState) (exact : List Bool)
+    (operands : Values) (frames : StackScoped state.stack)
+    (transition : finishMap state exact operands = .next after) :
+    LexicallyScoped after := by
+  unfold finishMap at transition
+  repeat' first
+    | exact nextControl_preserves state after _ frames transition trivial
+    | exact updateMapEntries_preserves state after _ _ _ frames transition
+    | solve | simp [unsupported, invalid] at transition
+    | split at transition
+
+theorem withMap_preserves (state after : LocalState) (value : Value)
+    (body : FiniteMap.Entries Value → Transition LocalState Outcome)
+    (frames : StackScoped state.stack)
+    (preserves : ∀ entries, body entries = .next after → LexicallyScoped after)
+    (transition : withMap state value body = .next after) : LexicallyScoped after := by
+  unfold withMap at transition
+  repeat' first
+    | exact preserves _ transition
+    | exact nextControl_preserves state after _ frames transition trivial
+    | solve | simp [unsupported, invalid] at transition
+    | split at transition
+
+theorem withMapKey_preserves (after : LocalState) (key : Value)
+    (body : MapKey → Transition LocalState Outcome)
+    (preserves : ∀ mapKey, body mapKey = .next after → LexicallyScoped after)
+    (transition : withMapKey key body = .next after) : LexicallyScoped after := by
+  unfold withMapKey at transition
+  split at transition
+  · exact preserves _ transition
+  · simp [unsupported] at transition
+
+theorem mapBuiltin_preserves (state after : LocalState) (name : String) (args : Values)
+    (frames : StackScoped state.stack)
+    (transition : mapBuiltin state name args = .next after) : LexicallyScoped after := by
+  unfold mapBuiltin at transition
+  dsimp only [raiseError] at transition
+  repeat' first
+    | solve | simp only [unsupported, reduceCtorEq] at transition
+    | with_reducible exact nextControl_preserves state after _ frames transition (by simp [ControlScoped])
+    | with_reducible apply withMap_preserves state after _ _ frames ?_ transition
+      intro entries transition
+      try dsimp only [raiseError] at transition
+    | with_reducible apply withMapKey_preserves after _ _ ?_ transition
+      intro mapKey transition
+      try dsimp only [raiseError] at transition
+    | split at transition <;> try dsimp only [raiseError] at transition
+
+theorem halt_next_preserves (after : LocalState) (outcome : Outcome)
+    (transition : (Transition.halt outcome : Transition LocalState Outcome) = .next after) :
+    LexicallyScoped after := by
+  cases transition
+
+theorem next_return_preserves (state after : LocalState) (values : Values)
+    (frames : StackScoped state.stack)
+    (transition : nextControl state (.ret values) = .next after) : LexicallyScoped after :=
+  nextControl_preserves state after _ frames transition trivial
+
+theorem next_raise_preserves (state after : LocalState) (exception : Exception)
+    (frames : StackScoped state.stack)
+    (transition : nextControl state (.raise exception) = .next after) : LexicallyScoped after :=
+  nextControl_preserves state after _ frames transition trivial
+
+theorem next_runtime_preserves (state after : LocalState) (name : String) (args : Values)
+    (frames : StackScoped state.stack)
+    (transition : nextControl state (.runtime name args) = .next after) : LexicallyScoped after :=
+  nextControl_preserves state after _ frames transition trivial
+
 theorem builtin_preserves (state after : LocalState) (name : String) (args : Values)
     (frames : StackScoped state.stack)
     (transition : builtin state name args = .next after) : LexicallyScoped after := by
   unfold builtin at transition
-  repeat' split at transition
-  all_goals simp only [nextControl, raiseError, unsupported] at transition
-  all_goals cases transition
-  all_goals exact ⟨trivial, frames⟩
+  dsimp only [raiseError, unsupported, invalid] at transition
+  repeat' first
+    | with_reducible exact mapBuiltin_preserves state after _ _ frames transition
+    | with_reducible exact next_return_preserves state after _ frames transition
+    | with_reducible exact next_raise_preserves state after _ frames transition
+    | with_reducible exact next_runtime_preserves state after _ _ frames transition
+    | with_reducible exact halt_next_preserves after _ transition
+    | with_reducible apply withMap_preserves state after _ _ frames ?_ transition
+      intro entries transition
+      try dsimp only [raiseError, unsupported, invalid] at transition
+      exact nextControl_preserves state after _ frames transition trivial
+    | split at transition <;> try dsimp only [raiseError, unsupported, invalid] at transition
 
 theorem invoke_preserves (world : CodeWorld) (state after : LocalState)
     (moduleName name : String) (args : Values) (external : Bool)
@@ -529,9 +629,11 @@ theorem invoke_preserves (world : CodeWorld) (state after : LocalState)
   unfold invoke at transition
   split at transition
   · exact builtin_preserves state after name args frames transition
-  · cases hm : world.find? (fun m => m.name == moduleName) with
-    | none => simp [hm, unsupported] at transition
-    | some mod =>
+  · split at transition
+    · exact mapBuiltin_preserves state after name args frames transition
+    · cases hm : world.find? (fun m => m.name == moduleName) with
+      | none => simp [hm, unsupported] at transition
+      | some mod =>
         simp only [hm] at transition
         split at transition
         · exact nextControl_preserves state after _ frames transition trivial
@@ -584,6 +686,7 @@ theorem finishCollect_preserves (world : CodeWorld) (state after : LocalState)
   unfold finishCollect at transition
   repeat' first
     | exact nextControl_preserves state after _ frames transition trivial
+    | exact finishMap_preserves state after _ _ frames transition
     | exact invoke_preserves world state after _ _ _ _ checked frames transition
     | exact applyClosure_preserves world state after _ _ _ _ _ checked frames transition
     | solve | simp [unsupported, invalid] at transition
@@ -644,6 +747,11 @@ theorem step_eval_preserves (world : CodeWorld) (context : Context) (stack : Lis
   | tuple elements =>
       obtain ⟨scope, covered, expressionChecked⟩ := before.control
       exact startCollect_preserves world _ after .tuple elements checked
+        ⟨scope, covered, by simpa [WellScoped, scopeCheck] using expressionChecked⟩
+        before.frames transition
+  | map exact elements =>
+      obtain ⟨scope, covered, expressionChecked⟩ := before.control
+      exact startCollect_preserves world _ after (.map exact) elements checked
         ⟨scope, covered, by simpa [WellScoped, scopeCheck] using expressionChecked⟩
         before.frames transition
   | bytes elements =>

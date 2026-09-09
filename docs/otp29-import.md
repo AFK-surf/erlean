@@ -117,10 +117,21 @@ tuples inside literals remain literal terms and must not be interpreted as synta
 
 ## Manifest and inventory
 
-The current Lean execution slice accepts integer, atom, list, tuple, and canonical
-bitstring literals, together with alias patterns. Bitstring construction segments,
-segment matching, maps, floats, closures, and unlisted runtime operations remain
-unsupported. Literal transport is broader than executable semantics.
+The Lean execution profile accepts integer, atom, list, tuple, canonical bitstring,
+and finite-map literals. It also supports alias patterns, finite closures, and
+the restricted binary segments described in the design tracker. Float execution
+and unlisted runtime operations remain unsupported. Literal transport is broader
+than executable semantics.
+
+Maps use canonical unique data keys. Keys can be integers, atoms, lists, tuples,
+bitstrings, pids, or references. Map, float, and function keys are unsupported,
+including those nested in composite keys. Values can contain maps and functions.
+Function-containing maps cannot participate in observable equality.
+Literal-key map patterns match a subset of fields. Bound-variable keys remain
+unsupported. Associative and exact updates evaluate all Core operands before
+checking the base and keys. Multiple missing exact keys are explicitly rejected
+because the current profile does not model the compiler's key-failure ordering.
+Canonical storage order does not specify Erlang term order or map iteration.
 
 Elixir metadata functions are retained whole. Their structural import does not
 imply that their runtime BIF dependencies are implemented; these remain visible

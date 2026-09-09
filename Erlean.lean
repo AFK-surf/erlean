@@ -1,11 +1,14 @@
 import Erlean.Core.Scope
 import Erlean.Core.Equality
+import Erlean.Core.Maps
+import Erlean.Core.ValueRules
 import Erlean.Logic.Controller
 import Erlean.Core.Match
 import Erlean.Core.Checks
 import Erlean.Core.Environment
 import Erlean.Import.Lower
 import Erlean.Semantics.Machine
+import Erlean.Semantics.Maps
 import Erlean.Semantics.Preservation
 import Erlean.Semantics.VariableSafety
 import Erlean.Logic.Segment

@@ -15,6 +15,20 @@ private def encodeBits (bits : List Bool) : String :=
       value * 2 + if bits[index * 4 + offset]?.getD false then 1 else 0) 0
     "0123456789abcdef".toList[nibble]?.getD '0')
 
+private def encodeKey : MapKey → Lean.Json
+  | .integer value => Lean.Json.mkObj [("tag", string "integer"), ("value", string (toString value))]
+  | .atom value => Lean.Json.mkObj [("tag", string "atom"), ("value", string value)]
+  | .nil => Lean.Json.mkObj [("tag", string "nil")]
+  | .cons head tail => Lean.Json.mkObj [("tag", string "cons"),
+      ("head", encodeKey head), ("tail", encodeKey tail)]
+  | .tuple values => Lean.Json.mkObj [("tag", string "tuple"),
+      ("items", .arr (values.map encodeKey).toArray)]
+  | .bitstring bits => Lean.Json.mkObj [("tag", string "bitstring"),
+      ("bits", string (toString bits.length)), ("hex", string (encodeBits bits))]
+  | .pid id => Lean.Json.mkObj [("tag", string "pid"), ("id", toJson id)]
+  | .reference id => Lean.Json.mkObj [("tag", string "reference"), ("id", toJson id)]
+
+mutual
 private def encodeValue : Value → Except String Lean.Json
   | .integer value => pure (Lean.Json.mkObj [("tag", string "integer"), ("value", string (toString value))])
   | .atom value => pure (Lean.Json.mkObj [("tag", string "atom"), ("value", string value)])
@@ -23,6 +37,10 @@ private def encodeValue : Value → Except String Lean.Json
     return Lean.Json.mkObj [("tag", string "cons"), ("head", ← encodeValue head), ("tail", ← encodeValue tail)]
   | .tuple values => do
     return Lean.Json.mkObj [("tag", string "tuple"), ("items", .arr (← values.mapM encodeValue).toArray)]
+  | .map entries => do
+    unless Value.mapOrdered entries do throw "Noncanonical internal map cannot be serialized"
+    let pairs ← encodeMapEntries entries
+    return Lean.Json.mkObj [("tag", string "map"), ("entries", .arr pairs.toArray)]
   | .bitstring bits => pure (Lean.Json.mkObj [("tag", string "bitstring"),
       ("bits", string (toString bits.length)), ("hex", string (encodeBits bits))])
   | .function mod name arity => pure (Lean.Json.mkObj [("tag", string "function"),
@@ -32,6 +50,16 @@ private def encodeValue : Value → Except String Lean.Json
   | .exceptionInfo _ => .error "Internal exception information cannot be serialized"
   | .pid id => pure (Lean.Json.mkObj [("tag", string "pid"), ("id", toJson id)])
   | .reference id => pure (Lean.Json.mkObj [("tag", string "reference"), ("id", toJson id)])
+termination_by value => sizeOf value
+
+private def encodeMapEntries : List (MapKey × Value) → Except String (List Lean.Json)
+  | [] => pure []
+  | (key, value) :: rest => do
+    let encoded ← encodeValue value
+    let remaining ← encodeMapEntries rest
+    return Lean.Json.arr #[encodeKey key, encoded] :: remaining
+termination_by entries => sizeOf entries
+end
 
 private def load (path : String) : IO ModuleReport := do
   checked (lowerModule (← readArtifact path))
