@@ -20,7 +20,7 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current checkpoint: Dijkstra example in development (2026-09-09)
+### Current checkpoint: universal imported Dijkstra correctness (2026-09-09)
 
 | Milestone | Status | Evidence / remaining work |
 | --- | --- | --- |
@@ -130,15 +130,26 @@ serialized through the primary agent.
 
 ### Validation and limitations
 
-- Dijkstra checkpoint: the retained OTP 29.0.6 source imports without rejection.
-  Seventeen graph scenarios agree with OTP and an independent BigInt Bellman-Ford
-  oracle; eleven malformed/negative input scenarios agree on `error:badarg`.
-  The general mathematical `DijkstraAlgorithm.distances_total` theorem has passed
-  kernel checking for arbitrary finite Nat-weight graphs, with no successful-run
-  or certificate premise. Actual-Core `settled`, `insert`, and `reverse` helper
-  refinements have also passed. Edge expansion, validation, search, and the final
-  universal Core contract remain under validation; this checkpoint alone does
-  not fulfill the user's universal implementation-proof requirement.
+- `Dijkstra.dijkstra_total_correct source graph` is kernel checked for every
+  finite directed graph with natural-number vertex identifiers and nonnegative
+  integer weights. It proves total correctness of the actual imported OTP 29.0.6
+  `dijkstra:distances/2` implementation, including source validation, sorted queue
+  operations, consumed-edge expansion, recursive search, and final reversal.
+  Returned distances are attained and minimal over all finite walks; missing
+  vertices are unreachable. There is no accepted-run, certificate-check, fixed
+  interpreter budget, or bounded-graph premise in the final theorem.
+- `DijkstraAlgorithm.distances_total` proves the mathematical algorithm terminates
+  within `|E| + 1` queue removals. This is not a bound on Core machine steps or a
+  complexity claim. Generic arbitrary-stack refinement lemmas prove each source
+  helper terminates and compose a finite Core execution for every input graph.
+  The proof allows parallel edges, self-loops, zero-weight cycles, disconnected
+  components, and unbounded integer magnitudes. The result specification is about
+  the distance lookup relation; no separate list-order or list-uniqueness theorem
+  is claimed. The source queue tie convention remains deterministic.
+- Dijkstra source/artifact reproduction and 17 graph scenarios pass against OTP
+  and independent BigInt Bellman-Ford. Eleven malformed/negative input scenarios
+  agree on `error:badarg`. These checks supplement, rather than discharge, the
+  universal theorem. Full-suite revalidation and the final axiom audit passed.
 - `node tools/check_all.mjs` passes the full bounded suite after OOM recovery.
   `node tools/build.mjs` compiles modules and native objects in dependency order;
   the final library, executable, and all example proofs build successfully.
@@ -246,12 +257,11 @@ serialized through the primary agent.
 
 ### Next work beyond the initial milestones
 
-1. Complete universal Dijkstra correctness for every finite natural-number
-   weighted directed graph: termination, attained minimal distances for all
-   reachable vertices, and omission of all unreachable vertices. Negative weights
-   are outside Dijkstra's precondition. Prove actual imported Core refinement,
-   not merely a second Lean implementation or an assumed successful certificate.
-   Keep independent differential checks; pending drafts are not validated evidence.
+1. The requested universal Dijkstra implementation proof is complete for its
+   natural-number vertex/weight API. Further graph-algorithm work should choose
+   explicit requirements such as generic vertex encodings, path reconstruction,
+   heap-based queues, or a different algorithm for negative weights. These are
+   future extensions, not hidden assumptions in the completed theorem.
 2. Generalize tail-delegation rules to arbitrary continuations when that client
    requires them; retain world compatibility obligations explicitly.
 3. Extend protocol proofs to multiple outstanding requests and open environments
@@ -290,12 +300,21 @@ serialized through the primary agent.
   artifact-correspondence checks. The final theorem audit uses only `propext`,
   `Classical.choice`, and `Quot.sound`, with no `sorryAx` or native execution
   oracle; pushed to `origin/main`.
-- Current checkpoint: real Dijkstra source and reproducible Core artifact,
+- `99a492c`: real Dijkstra source and reproducible Core artifact,
   integer-order extension, universally correct mathematical model, and generic
   Core helper refinements. Dependency-ordered builds, the machine regression
   checks, model/helper axiom audit, and 17 graph plus 11 invalid-input differential
-  checks passed. The universal Core entry contract is not yet validated; the
-  full suite will run after that integration.
+  checks passed; pushed. The final universal Core entry contract was still pending
+  at that checkpoint.
+- Current checkpoint: arbitrary-input Core edge expansion and source validation,
+  search-loop refinement, and the universal `dijkstra_total_correct` contract.
+  All proof modules passed kernel checking without increasing the 2 GiB memory
+  cap. The complete suite passed: 91 existing sequential differential cases,
+  17 actor scenarios, 17 Dijkstra graphs, 11 invalid Dijkstra inputs, importer
+  rejection checks, recording/replay, and source/artifact correspondence.
+  The final implementation theorem depends only on `propext`, `Classical.choice`,
+  and `Quot.sound`; there are no custom axioms, `sorryAx`, or native execution
+  oracles. The carrying commit records this validated checkpoint.
 
 ## 1. Purpose and success criteria
 

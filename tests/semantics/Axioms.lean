@@ -12,6 +12,7 @@ import Erlean.Runtime.Invariants
 import Erlean.Runtime.SignalBounds
 import Erlean.Examples.ProtocolPhases
 import Erlean.Examples.ProtocolSafety
+import Erlean.Examples.Dijkstra
 
 #print axioms Erlean.Examples.identity_totalCorrect
 #print axioms Erlean.Examples.gleam_identity_totalCorrect
@@ -40,3 +41,8 @@ import Erlean.Examples.ProtocolSafety
 #print axioms Erlean.Examples.ProtocolInvariant.exchange_allSchedules
 #print axioms Erlean.Examples.ProtocolInvariant.exchange_reply_correct
 #print axioms Erlean.Examples.ProtocolInvariant.exchange_pendingRepliesAuthentic
+#print axioms Erlean.Examples.DijkstraCertificate.checkCertificate_sound
+#print axioms Erlean.Examples.DijkstraAlgorithm.distances_total
+#print axioms Erlean.Examples.Dijkstra.search_returns
+#print axioms Erlean.Examples.Dijkstra.dijkstra_terminates_correct
+#print axioms Erlean.Examples.Dijkstra.dijkstra_total_correct
