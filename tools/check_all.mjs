@@ -25,6 +25,7 @@ const fixtures = [
   'tests/fixtures/erlang/byte_codec',
   'tests/fixtures/erlang/actor_protocol',
   'tests/fixtures/erlang/actor_lifecycle',
+  'tests/fixtures/erlang/dijkstra',
   'tests/fixtures/elixir/identity',
   'tests/fixtures/gleam/identity',
 ];
@@ -43,6 +44,7 @@ const axioms = run('kernel theorem axiom audit', 'lake',
 assert.doesNotMatch(axioms, /sorryAx|ofReduceBool|native_decide|Lean\.ofReduce/);
 run('OTP differential checks and explicit model failures', 'node', ['tools/check_semantics.mjs']);
 run('OTP actor differential scenarios', 'node', ['tools/check_actors.mjs']);
+run('Dijkstra OTP and independent shortest-path checks', 'node', ['tools/check_dijkstra.mjs']);
 
 for (const directory of fixtures) {
   const manifest = JSON.parse(readFileSync(`${directory}/manifest.json`));

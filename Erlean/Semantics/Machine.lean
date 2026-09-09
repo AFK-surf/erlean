@@ -106,6 +106,7 @@ def builtin (state : LocalState) (name : String) (args : Values) :
   | "+", [.integer a, .integer b] => ret (.integer (a + b))
   | "-", [.integer a, .integer b] => ret (.integer (a - b))
   | "*", [.integer a, .integer b] => ret (.integer (a * b))
+  | "=<", [.integer a, .integer b] => ret (boolean (decide (a ≤ b)))
   | "=:=", [a, b] =>
     if a.exactComparable && b.exactComparable then ret (boolean (a == b))
     else unsupported "Exact equality involving function identity or exception information"

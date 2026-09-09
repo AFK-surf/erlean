@@ -20,7 +20,7 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current checkpoint: all-schedule closed-exchange safety (2026-09-09)
+### Current checkpoint: Dijkstra example in development (2026-09-09)
 
 | Milestone | Status | Evidence / remaining work |
 | --- | --- | --- |
@@ -43,6 +43,18 @@ serialized through the primary agent.
 
 ### Decision log
 
+- 2026-09-09: Add a real list-based Erlang Dijkstra example for finite directed
+  graphs with natural-number vertex identifiers and nonnegative integer weights.
+  The user requires a universal algorithm termination/refinement theorem, not
+  just certificate-conditioned correctness or representative executions. Prove
+  the pure algorithm for arbitrary graphs, then connect the actual imported
+  Core implementation to it for arbitrary inputs and continuations. The
+  certificate soundness theorem is a supporting lemma, not the acceptance gate.
+  Consume outgoing edges when their source is first settled: queue length plus
+  remaining-edge count decreases on every search iteration, giving a proved
+  graph-size resource bound without bounding the accepted input graph.
+  The only planned BIF extension is integer `erlang:'=<'/2`; other term-order
+  comparisons remain unsupported rather than using an incorrect ordering.
 - 2026-09-09: Target OTP 29; pin the precise patch after checking an available
   runtime and its compiler output. No claim that all OTP 29 constructs work.
 - 2026-09-09: Pin Lean to `leanprover/lean4:v4.33.1`, already available in the
@@ -118,6 +130,15 @@ serialized through the primary agent.
 
 ### Validation and limitations
 
+- Dijkstra checkpoint: the retained OTP 29.0.6 source imports without rejection.
+  Seventeen graph scenarios agree with OTP and an independent BigInt Bellman-Ford
+  oracle; eleven malformed/negative input scenarios agree on `error:badarg`.
+  The general mathematical `DijkstraAlgorithm.distances_total` theorem has passed
+  kernel checking for arbitrary finite Nat-weight graphs, with no successful-run
+  or certificate premise. Actual-Core `settled`, `insert`, and `reverse` helper
+  refinements have also passed. Edge expansion, validation, search, and the final
+  universal Core contract remain under validation; this checkpoint alone does
+  not fulfill the user's universal implementation-proof requirement.
 - `node tools/check_all.mjs` passes the full bounded suite after OOM recovery.
   `node tools/build.mjs` compiles modules and native objects in dependency order;
   the final library, executable, and all example proofs build successfully.
@@ -225,8 +246,12 @@ serialized through the primary agent.
 
 ### Next work beyond the initial milestones
 
-1. Select a larger real client module before expanding the supported profile;
-   prioritize its measured Core/BIF inventory, not an unbounded compatibility claim.
+1. Complete universal Dijkstra correctness for every finite natural-number
+   weighted directed graph: termination, attained minimal distances for all
+   reachable vertices, and omission of all unreachable vertices. Negative weights
+   are outside Dijkstra's precondition. Prove actual imported Core refinement,
+   not merely a second Lean implementation or an assumed successful certificate.
+   Keep independent differential checks; pending drafts are not validated evidence.
 2. Generalize tail-delegation rules to arbitrary continuations when that client
    requires them; retain world compatibility obligations explicitly.
 3. Extend protocol proofs to multiple outstanding requests and open environments
@@ -258,13 +283,19 @@ serialized through the primary agent.
 - `b053016`: arbitrary-schedule actor cursor and signal bounds, plus exact
   imported protocol boundary/loop equations. The full serialized suite and kernel
   axiom audit passed; pushed to `origin/main`.
-- Current checkpoint: imported client/server runtime preservation, all accepted
+- `7820028`: imported client/server runtime preservation, all accepted
   schedule induction, exact root result, and pending-reply authenticity. The
   complete serialized suite passed under the same 2 GiB limit: 91 sequential
   differential cases, 17 actor scenarios, replay, importer/rejection and
   artifact-correspondence checks. The final theorem audit uses only `propext`,
   `Classical.choice`, and `Quot.sound`, with no `sorryAx` or native execution
-  oracle. The carrying commit records this validated checkpoint.
+  oracle; pushed to `origin/main`.
+- Current checkpoint: real Dijkstra source and reproducible Core artifact,
+  integer-order extension, universally correct mathematical model, and generic
+  Core helper refinements. Dependency-ordered builds, the machine regression
+  checks, model/helper axiom audit, and 17 graph plus 11 invalid-input differential
+  checks passed. The universal Core entry contract is not yet validated; the
+  full suite will run after that integration.
 
 ## 1. Purpose and success criteria
 

@@ -14,6 +14,15 @@ private def callBif (name : String) (args : List Expr) : Expr :=
   .call (.lit (.atom "erlang")) (.lit (.atom name)) args
 
 def main : IO Unit := do
+  expect [] (callBif "=<" [.lit (.integer (-5)), .lit (.integer 2)])
+    (.returned [.atom "true"]) "integer order includes negative integers"
+  expect [] (callBif "=<" [.lit (.integer 7), .lit (.integer 7)])
+    (.returned [.atom "true"]) "integer order is non-strict"
+  expect [] (callBif "=<" [.lit (.integer 8), .lit (.integer 7)])
+    (.returned [.atom "false"]) "integer order rejects a greater left operand"
+  expect [] (callBif "=<" [.lit (.atom "a"), .lit (.atom "b")])
+    (.fault (.unsupported "BIF erlang:=</2"))
+    "non-integer term ordering remains explicitly outside the profile"
   expect [] (.letE [0, 1] (.values [.lit (.integer 3), .lit (.integer 5)])
     (.tuple [.var 1, .var 0])) (.returned [.tuple [.integer 5, .integer 3]])
     "Core multiple values must bind independently of tuple values"
