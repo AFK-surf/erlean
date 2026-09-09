@@ -1,5 +1,32 @@
 import Erlean.Import.Lower
 import Erlean.Semantics.Machine
+import Erlean.Logic.Controller
+
+namespace ControllerRegression
+
+open Erlean.Logic.Controller
+
+private def step (state : Nat) (emit : Bool) : Nat × List Nat :=
+  (state + 1, if emit then [state, state + 1] else [])
+
+private def transition (state : Nat) (event : Bool) (next : Nat) (effects : List Nat) : Prop :=
+  (next, effects) = step state event
+
+-- Empty and multiple-effect steps form a real trace, with ordered outputs.
+example : Trace transition 0 [false, true] 2 [1, 2] := by
+  have first : transition 0 false 1 [] := rfl
+  have second : transition 1 true 2 [1, 2] := rfl
+  exact .cons first (.cons second (.nil 2))
+
+example (execution : Trace transition 0 [false, true] finish effects) :
+    (finish, effects) = (2, [1, 2]) := by
+  simpa [step, run] using Trace.exact step transition (fun _ _ _ _ h => h) execution
+
+example (execution : Trace transition state [] finish effects) :
+    (finish, effects) = (state, []) :=
+  Trace.exact step transition (fun _ _ _ _ h => h) execution
+
+end ControllerRegression
 
 open Erlean.Core Erlean.Import Erlean.Semantics
 

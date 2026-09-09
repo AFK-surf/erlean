@@ -22,6 +22,15 @@ from each language. Sequential milestones precede actor-system verification.
 
 ### Current work: Cue controller verification support (2026-09-09)
 
+The current cleanup moves all-trace exactness into `Controller.Trace.exact`.
+Every related concrete step must match the deterministic model's state and
+complete ordered effect list. Trace existence remains a separate obligation.
+Cue will reuse this rule in both controller proofs and remove three unused
+auxiliary lemmas. Production semantics and build logic stay unchanged.
+The full serialized suite passed, including empty-trace and ordered multi-effect
+regressions. The new theorem depends only on `propext`. The downstream Git pin
+and proof-package check are next. Build scripts remain unchanged at the user's request.
+
 Cue will consume Erlean through a pinned Git dependency to prove its production
 Agent Loop kernel. Add explicit OTP `29.0.2` import support alongside the existing
 `29.0.6` fixture profile. Export requires the exact selected runtime patch and

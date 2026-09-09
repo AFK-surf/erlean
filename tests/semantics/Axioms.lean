@@ -51,4 +51,5 @@ import Erlean.Examples.Dijkstra.Correctness
 #print axioms Erlean.Core.Value.equal_eq_true
 #print axioms Erlean.Core.Value.public_of_exactComparable
 #print axioms Erlean.Logic.Controller.Trace.safe
+#print axioms Erlean.Logic.Controller.Trace.exact
 #print axioms Erlean.Logic.Controller.trace_of_refinement

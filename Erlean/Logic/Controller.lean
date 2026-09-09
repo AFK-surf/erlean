@@ -77,6 +77,27 @@ inductive Trace (transition : Concrete → Event → Concrete → List Output �
       (rest : Trace transition middle events finish later) :
       Trace transition state (event :: events) finish (emitted ++ later)
 
+/-- Every concrete trace agrees with the deterministic model when every
+    concrete step does. This preserves the complete ordered effect list,
+    including empty and multiple-effect steps. It does not assert existence
+    of a concrete trace; use `trace_of_refinement` for that obligation. -/
+theorem Trace.exact
+    (step : State → Event → State × List Effect)
+    (transition : State → Event → State → List Effect → Prop)
+    (exactStep : ∀ state event next effects,
+      transition state event next effects → (next, effects) = step state event)
+    (execution : Trace transition state events finish effects) :
+    (finish, effects) = run step state events := by
+  induction execution with
+  | nil state => rfl
+  | @cons state event middle emitted events finish later first rest ih =>
+    have current := exactStep state event middle emitted first
+    calc
+      (finish, emitted ++ later) =
+          ((run step middle events).1, emitted ++ (run step middle events).2) := by
+        rw [← ih]
+      _ = run step state (event :: events) := by simp only [run, ← current]
+
 /-- Unlike forward simulation alone, this rule covers every trace of the given
     relation, provided every concrete transition preserves the invariant. -/
 theorem Trace.invariant
