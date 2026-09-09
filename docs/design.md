@@ -28,8 +28,11 @@ complete ordered effect list. Trace existence remains a separate obligation.
 Cue will reuse this rule in both controller proofs and remove three unused
 auxiliary lemmas. Production semantics and build logic stay unchanged.
 The full serialized suite passed, including empty-trace and ordered multi-effect
-regressions. The new theorem depends only on `propext`. The downstream Git pin
-and proof-package check are next. Build scripts remain unchanged at the user's request.
+regressions. The new theorem depends only on `propext`. Cue now pins
+`17e8be102cd8d5b4018ef821bedc57bbdfa1662d` and its full proof-package check passed,
+including 241 OTP comparisons and the final axiom audit. Both compiled controller
+proofs reuse the theorem. Three unused Cue lemmas are removed. Build scripts
+remain unchanged at the user's request.
 
 Cue will consume Erlean through a pinned Git dependency to prove its production
 Agent Loop kernel. Add explicit OTP `29.0.2` import support alongside the existing
@@ -63,7 +66,7 @@ and per-case exhaustion with atomic output. The original single-call CLI checks
 and all artifact, differential, and theorem checks still pass. Cue's Round,
 Dependency, Ownership, and Policy modules have passed kernel checking.
 
-Cue now pins `d1ee8a67c22d2aecc5ff4ec2d8f3408eb6c166a8` through a real public
+At the initial integration checkpoint, Cue pinned `d1ee8a67c22d2aecc5ff4ec2d8f3408eb6c166a8` through a real public
 Git dependency. Its complete proof gate passed, including two exact OTP 29.0.2
 exports, emitted-syntax correspondence, 241 batch differential cases, and an
 allowlisted final axiom audit. Its full Agent Loop application suite passed
