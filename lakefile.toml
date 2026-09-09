@@ -1,6 +1,10 @@
 name = "erlean"
 version = "0.1.0"
-defaultTargets = ["Erlean"]
+defaultTargets = ["Erlean", "erlean"]
 
 [[lean_lib]]
 name = "Erlean"
+
+[[lean_exe]]
+name = "erlean"
+root = "Main"

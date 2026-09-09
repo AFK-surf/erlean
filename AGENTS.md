@@ -5,6 +5,8 @@
   used in conversation.
 - Target Erlang/OTP 29. Record the exact OTP patch version and compiler options
   for imported artifacts and compatibility tests.
+- Manage OTP installations with asdf and honor the repository `.tool-versions`.
+  Missing development dependencies may be installed as needed.
 - Keep semantic claims scoped to the implemented feature profile and explicit
   runtime assumptions. Do not equate successful testing with a correctness proof.
 - Use `docs/design.md` as the single authoritative design and progress tracker.

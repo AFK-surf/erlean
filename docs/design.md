@@ -20,18 +20,18 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current checkpoint: bootstrap in progress (2026-09-09)
+### Current checkpoint: first Erlang execution (2026-09-09)
 
 | Milestone | Status | Evidence / remaining work |
 | --- | --- | --- |
-| M0: reproducible input | In progress | Repository inspected; OTP runtime and three source adapters still needed. |
-| M1: sequential verification | In progress | Lean project and first sequential slice being implemented. |
+| M0: reproducible input | In progress | All three source adapters export reproducibly; final cross-language execution/proof checks in progress. |
+| M1: sequential verification | In progress | Total local machine and CLI execute imported identity; generic runner theorems checked; imported contracts and differential tests in progress. |
 | M2: modular proofs | Not started | Depends on linked execution and function contracts. |
 | M3: actor verification | Not started | Depends on sequential and runtime request interfaces. |
 
-Active work is split between OTP extraction tooling, Core types/scope validation,
-and integration of the Lean machine and proof layer. Shared integration files and
-this tracker are maintained by the primary agent.
+Active work is split between Elixir/Gleam adapters, imported-module contracts, and
+sequential differential regressions. Shared integration files and this tracker are
+maintained by the primary agent.
 
 ### Decision log
 
@@ -41,21 +41,60 @@ this tracker are maintained by the primary agent.
   development environment. Start without external Lean library dependencies.
 - 2026-09-09: Keep design and progress in this one document rather than create a
   second potentially divergent roadmap.
+- 2026-09-09: Pin OTP `29.0.6` using asdf. Extraction uses `compile:noenv_file`
+  with `[to_core, binary, no_copt, deterministic, return_errors, return_warnings]`,
+  after `v3_core` and before `sys_core_bsm`. See [import notes](otp29-import.md).
+- 2026-09-09: Use tagged JSON preserving the raw OTP Core record tree. Language
+  integers are decimal strings; raw floating-point bits and bitstrings are retained
+  even when the sequential value profile cannot execute them.
+- 2026-09-09: Reject execution/emission of partially lowered modules. Coverage
+  reports preserve rejected function signatures and original exports, preventing
+  a missing implementation from silently becoming an Erlang `undef` result.
+- 2026-09-09: Initial function values represent named local functions only; closures,
+  `letrec`, external fun creation, and fun introspection are deferred.
+- 2026-09-09: Pin asdf Elixir `1.20.0` and Gleam `1.18.1`. Elixir uses its debug-info
+  backend to recover Erlang forms; Gleam produces generated Erlang. Both flow into
+  the same pinned OTP extraction stage and retain intermediate provenance hashes.
+- 2026-09-09: Normalize `match_fail` function-clause descriptors to the observable
+  `function_clause` atom. Differential execution exposed the incorrect metadata
+  tuple result; argument metadata belongs to the unmodeled stacktrace.
 
 ### Validation and limitations
 
-- Initial repository contains only the license, README, and design documentation.
-- Design documentation passes `git diff --check`; no implementation checks yet.
-- Erlang, Elixir, and Gleam were not initially on `PATH` in this environment.
-- No executable semantics, imported-module theorem, or OTP compatibility result
-  has been completed yet.
+- `lake build` passes for the library and `erlean` executable.
+- `lake env lean --run tests/import/Smoke.lean` passes malformed-input, precision,
+  lexical scope, unsupported-feature, and real OTP fixture checks.
+- `node tools/check_export.mjs` checks reproducible extraction, hashes, operation
+  inventory, and lossless literals using asdf-managed OTP 29.0.6.
+- `Erlean.Examples.identity_totalCorrect` proves total correctness for every Value
+  input of the actual emitted Erlang identity AST. Its axiom audit reports only
+  `propext` and `Quot.sound`; no `sorry`, custom axiom, or native execution axiom.
+- `node tools/check_languages.mjs` checks reproducibility and source/intermediate
+  provenance for the Elixir and Gleam artifacts.
+- Kernel-checked generic execution results: step determinism, finite evaluation
+  soundness/completeness, budget splitting, and stability under additional fuel.
+- Scope and pattern checks cover the initial integer/atom/list/tuple profile.
+- Machine support includes multi-values, binding, sequencing, construction,
+  named calls, cases/guards, selected integer BIFs, and `match_fail/1`. Exceptions
+  expose class/reason only; stack inspection and handlers are not yet implemented.
+- Unknown BIFs, unlinked dependencies, and other unsupported operations report
+  model faults. Generated `module_info` calls remain visible obligations.
+- No full OTP compatibility, closure support, actor execution, or completed M0/M1
+  claim is made. State preservation and recursive-function contracts remain open.
 
 ### Next work
 
-1. Establish the Lean build and executable/proof skeleton.
-2. Obtain OTP 29, pin the extraction stage, and export a real Erlang fixture.
-3. Connect a supported sequential Core slice to execution and proof checks.
-4. Expand source adapters to Elixir and Gleam and keep unsupported coverage visible.
+1. Prove an arbitrary-input contract against the emitted real Erlang AST.
+2. Complete recursive-list and exception/guard differential regression coverage.
+3. Finish Elixir/Gleam adapters and execute their real exported artifacts.
+4. Establish repeatable checks and push each validated implementation checkpoint.
+
+### Commit checkpoints
+
+- `a9c21be`: design, repository instructions, and buildable Lean bootstrap; pushed
+  to `origin/main`.
+- Next checkpoint: three source exporters, OTP import, first local machine, CLI,
+  generic runner proofs, and the imported Erlang identity contract.
 
 ## 1. Purpose and success criteria
 

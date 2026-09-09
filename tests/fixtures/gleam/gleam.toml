@@ -1,0 +1,3 @@
+name = "erlean_fixture"
+version = "0.1.0"
+target = "erlang"
