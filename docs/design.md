@@ -20,7 +20,7 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current checkpoint: lexical preservation and protocol proof rules (2026-09-09)
+### Current checkpoint: actor cursor and signal bounds (2026-09-09)
 
 | Milestone | Status | Evidence / remaining work |
 | --- | --- | --- |
@@ -195,17 +195,28 @@ serialized through the primary agent.
   expose class/reason only; handlers are implemented but stack inspection is not.
 - Unknown BIFs, unlinked dependencies, and other unsupported operations report
   model faults. Generated `module_info` calls remain visible obligations.
+- Actor cursor bounds and pending-signal identifier bounds are proved for every
+  accepted system transition and finite replay from the initial system, including
+  lifecycle requests and signal handlers. The next signal identifier is fresh
+  relative to the pending queue. Both modules passed the resource-bounded serial
+  build; these facts do not establish protocol correctness or OTP equivalence.
+- Exact runtime-boundary states and receive-loop equalities for the imported
+  request/reply client and server are kernel checked for every public payload.
+  Boundary searches have explicit failure, with no fallback state. Staged
+  normal-form equalities avoid repeatedly expanding earlier execution segments;
+  their build passed in 20 seconds under the existing 2 GiB compiler cap.
 - No full OTP compatibility or completed M3 claim is made. Local lexical
-  preservation is proved; actor structural invariants and the all-schedule protocol
-  invariant remain separate obligations. Implemented contracts are scoped above.
+  preservation and the stated actor bounds are proved; the all-schedule protocol
+  invariant remains a separate obligation. Implemented contracts are scoped above.
 
 ### Next work
 
 1. Relate actual imported server/client control states to protocol phases and
    prove a request/reply invariant over every accepted system schedule. Replay,
    FIFO eligibility, and isolated handler lemmas alone do not meet this criterion.
-2. Prove actor mailbox cursor bounds for arbitrary successful system transitions.
-   Pending proof drafts are not validated evidence.
+2. Connect protocol runtime boundaries, selected-message witnesses, and pure
+   continuation intervals. Draft files ending in `.lean.pending` are excluded
+   from the build and are not validated evidence.
 3. State fairness/delivery and timing assumptions explicitly for any progress
    theorem; no liveness theorem currently follows from the executable scheduler.
 4. Generalize tail-delegation rules to arbitrary continuations when a client
@@ -228,9 +239,13 @@ serialized through the primary agent.
 - `b55fddc`: imported byte-codec contracts and explicit actor runtime,
   including lifecycle signals, 91 sequential cases and 17 actor scenarios. The
   complete bounded suite passed and the commit was pushed.
-- Current checkpoint: full local lexical preservation, reachable variable safety,
-  and imported protocol-handler/pure-segment proof rules. The carrying commit
-  records the revision and validated checks.
+- `05ca217`: full local lexical preservation, reachable variable safety, and
+  imported protocol-handler/pure-segment proof rules; complete suite passed and pushed.
+- Current checkpoint: arbitrary-schedule actor cursor and signal bounds. The
+  exact imported protocol boundary/loop lemmas also pass the kernel axiom audit.
+  The full serialized suite passed: 91 sequential and 17 actor differential
+  cases, replay, rejection checks, and all proof-artifact correspondence checks.
+  The carrying commit records the revision; protocol induction remains pending.
 
 ## 1. Purpose and success criteria
 

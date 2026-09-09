@@ -8,6 +8,9 @@ import Erlean.Examples.Protocol
 import Erlean.Semantics.Preservation
 import Erlean.Semantics.VariableSafety
 import Erlean.Logic.Segment
+import Erlean.Runtime.Invariants
+import Erlean.Runtime.SignalBounds
+import Erlean.Examples.ProtocolPhases
 
 #print axioms Erlean.Examples.identity_totalCorrect
 #print axioms Erlean.Examples.gleam_identity_totalCorrect
@@ -26,3 +29,10 @@ import Erlean.Logic.Segment
 #print axioms Erlean.Semantics.runLocal_preserves_lexical_scope
 #print axioms Erlean.Logic.seekBoundary_sound
 #print axioms Erlean.Semantics.initialCall_reachable_variable_not_unbound
+#print axioms Erlean.Runtime.initial_replay_cursorBounds
+#print axioms Erlean.Runtime.pending_nextSignal_fresh
+#print axioms Erlean.Runtime.initial_replay_signalBounds
+#print axioms Erlean.Examples.ProtocolInvariant.clientBoundary_program_halt
+#print axioms Erlean.Examples.ProtocolInvariant.serverBoundary_program_halt
+#print axioms Erlean.Examples.ProtocolInvariant.clientWait_loop
+#print axioms Erlean.Examples.ProtocolInvariant.serverSendReply_loop
