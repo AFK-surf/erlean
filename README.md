@@ -7,12 +7,14 @@ Erlang, Elixir, and Gleam modules using executable semantics and proofs in Lean.
 The initial slice imports real modules from all three languages, proves their
 identity functions for arbitrary modeled values, proves list reversal and a
 higher-order map example, and reuses a dependency contract across linked modules.
-Captured closures, recursive groups, and class/reason exception handlers execute;
+Captured closures, recursive groups, and class/reason exception handlers execute.
 The byte codec has a bounded-input round-trip proof. The restricted actor runtime
 supports explicit scheduling, signal delivery, receive, monitor/link lifecycle,
 and replay. Tests include 91 sequential cases and 17 actor scenarios against OTP;
-local lexical preservation is proved. Schedule-independent protocol proofs remain
-in progress; testing is compatibility evidence, not OTP equivalence.
+local lexical preservation and actor cursor/signal bounds are proved. The imported
+closed request/reply exchange has safety proofs over every finite accepted schedule:
+a finished root returns the original payload, and pending replies preserve its
+reference and payload. This does not prove termination or OTP equivalence.
 
 See the [design document](docs/design.md) for the architecture, trust boundary,
 verification interfaces, and implementation milestones.

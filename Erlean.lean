@@ -19,6 +19,7 @@ import Erlean.Examples.Protocol
 import Erlean.Runtime.Invariants
 import Erlean.Runtime.SignalBounds
 import Erlean.Examples.ProtocolPhases
+import Erlean.Examples.ProtocolSafety
 
 /-!
 # erlean

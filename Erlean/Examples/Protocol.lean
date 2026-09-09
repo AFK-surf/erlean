@@ -2,12 +2,11 @@ import Erlean.Runtime.Actors
 import Erlean.Examples.ImportedActorProtocol
 
 /-!
-Proof candidates over the executable actor model, pending serialized checking.
-These establish replay composition, FIFO eligibility, and an exact send handler.
-They do not establish the imported request/reply protocol invariant: that needs
-a control-state simulation covering every client/server continuation and every
-accepted run, delivery, and time-advance choice. No macro-model refinement is
-assumed here, and this file does not satisfy the M3 acceptance criterion.
+Kernel-checked building blocks over the executable actor model: replay
+composition, FIFO eligibility, and exact imported send/return handler segments.
+These local facts alone are not an all-schedule protocol invariant. The complete
+control-state proof is organized in the ProtocolPhases, ProtocolInvariant,
+ProtocolRuntime, and ProtocolSafety modules; no macro-model refinement is assumed.
 -/
 
 namespace Erlean.Examples.Protocol
@@ -138,8 +137,8 @@ def ClientAtMatchedReply (process : Process) (reference : Nat) (payload : Value)
   process.state.context.env.lookup 11 = some (.reference reference) ∧
   process.state.context.env.lookup 12 = some payload
 
-/-- Candidate safety property for the closed exchange scenario, not yet proved
-    inductive: every ordinary server-to-client signal carries the right reply. -/
+/-- Observable safety property for the closed exchange scenario: every ordinary
+    server-to-client signal carries the right reply. -/
 def PendingRepliesAuthentic (system : System) (server client reference : Nat)
     (payload : Value) : Prop :=
   ∀ signal ∈ system.pending,

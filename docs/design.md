@@ -1,7 +1,7 @@
 # Design: Executable Core Erlang Semantics in Lean 4
 
-Status: implementation started. The architecture below is the target; the tracker
-records actual coverage and must not be read as a full compatibility claim.
+Status: initial milestones implemented for the restricted profiles in the
+tracker. The broader architecture is a target, not a full compatibility claim.
 
 Target: Erlang/OTP 29. Each supported build profile must pin an exact OTP patch
 release, compiler options, and Core extraction stage. Lean 4 and source-language
@@ -20,14 +20,14 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current checkpoint: actor cursor and signal bounds (2026-09-09)
+### Current checkpoint: all-schedule closed-exchange safety (2026-09-09)
 
 | Milestone | Status | Evidence / remaining work |
 | --- | --- | --- |
 | M0: reproducible input | Complete for the fixture profile | Reproducible real imports from all three languages, manifests, inventories, and rejection diagnostics pass. |
 | M1: sequential verification | Complete for the restricted profile | Imported reversal, higher-order identity-map, byte codec, runner correspondence, and full local lexical preservation are proved. General maps/bitstrings and stacktraces remain excluded. |
 | M2: modular proofs | Complete for tail delegation | Real imported client reuses a dependency contract in an explicit linked world; arbitrary continuation lifting remains future work. |
-| M3: actor verification | In progress | Explicit runtime requests, FIFO signals, selective receive, deadlines, monitor/link lifecycle, and replay execute; all-schedule protocol invariant remains open. |
+| M3: actor verification | Complete for the closed-exchange profile | Runtime/lifecycle/replay execute; actual imported request/reply safety is proved for every finite accepted schedule. Progress assumptions are explicit; no liveness theorem is claimed. |
 
 The first end-to-end success criterion is met for small identity modules from all
 three source languages. This is a restricted sequential slice, not completion of
@@ -184,7 +184,8 @@ serialized through the primary agent.
   of delivered signals, and link the actual imported server/client handlers to
   exact reference/payload-preserving send and return prefixes. Generic pure-segment
   boundary lemmas hide intermediate Core frames without assuming protocol safety.
-  The complete closed-exchange phase simulation remains open.
+  The complete closed-exchange phase simulation is now proved over the actual
+  imported module and system transition, not a separate macro-model.
 - Machine regressions check multiple values, invalid arities/scope, guard fallback,
   unsupported faults, fuel resumption, and bounded stack use for tail calls.
 - Scope and pattern checks cover integers, atoms, lists, tuples, alias bindings,
@@ -205,22 +206,35 @@ serialized through the primary agent.
   Boundary searches have explicit failure, with no fallback state. Staged
   normal-form equalities avoid repeatedly expanding earlier execution segments;
   their build passed in 20 seconds under the existing 2 GiB compiler cap.
-- No full OTP compatibility or completed M3 claim is made. Local lexical
-  preservation and the stated actor bounds are proved; the all-schedule protocol
-  invariant remains a separate obligation. Implemented contracts are scoped above.
+- `exchange_allSchedules` proves the complete closed-exchange invariant after
+  every finite accepted schedule from `actor_protocol:exchange/1`, for every
+  public modeled payload. The invariant tracks both processes' real Core
+  continuations, selected mailbox messages, allowed network payloads, and
+  allocation counters. It includes pure steps, runtime requests, ordinary
+  delivery, normal termination, and arbitrary increasing logical-time choices.
+- `exchange_reply_correct` proves that a finished root has returned exactly
+  `{ok, Payload}` with the original payload. `exchange_pendingRepliesAuthentic`
+  proves every pending signal to the root is an ordinary reply with the expected
+  reference and payload. These are conditional safety properties, not eventual
+  termination, message-count uniqueness, or open-environment authentication.
+- M0 through M3 acceptance criteria are met for the explicitly restricted
+  profiles above. There is no claim of full OTP compatibility, compiler
+  correctness, general module verification, or liveness. The endpoint search's
+  128-step bound is a local proof-construction bound, not a bound on the schedules
+  quantified by the protocol theorem. Final full-suite revalidation passed.
 
-### Next work
+### Next work beyond the initial milestones
 
-1. Relate actual imported server/client control states to protocol phases and
-   prove a request/reply invariant over every accepted system schedule. Replay,
-   FIFO eligibility, and isolated handler lemmas alone do not meet this criterion.
-2. Connect protocol runtime boundaries, selected-message witnesses, and pure
-   continuation intervals. Draft files ending in `.lean.pending` are excluded
-   from the build and are not validated evidence.
-3. State fairness/delivery and timing assumptions explicitly for any progress
-   theorem; no liveness theorem currently follows from the executable scheduler.
-4. Generalize tail-delegation rules to arbitrary continuations when a client
-   example requires them; retain world compatibility obligations explicitly.
+1. Select a larger real client module before expanding the supported profile;
+   prioritize its measured Core/BIF inventory, not an unbounded compatibility claim.
+2. Generalize tail-delegation rules to arbitrary continuations when that client
+   requires them; retain world compatibility obligations explicitly.
+3. Extend protocol proofs to multiple outstanding requests and open environments
+   with explicit rely/guarantee assumptions. The current theorem starts with the
+   specified closed initial system and does not assume hostile message injection.
+4. If eventual-reply or timeout progress is required, formalize the execution and
+   fairness assumptions in Section 8 before proving it. No liveness theorem
+   follows merely from the debugging scheduler or differential corpus.
 
 ### Commit checkpoints
 
@@ -241,11 +255,16 @@ serialized through the primary agent.
   complete bounded suite passed and the commit was pushed.
 - `05ca217`: full local lexical preservation, reachable variable safety, and
   imported protocol-handler/pure-segment proof rules; complete suite passed and pushed.
-- Current checkpoint: arbitrary-schedule actor cursor and signal bounds. The
-  exact imported protocol boundary/loop lemmas also pass the kernel axiom audit.
-  The full serialized suite passed: 91 sequential and 17 actor differential
-  cases, replay, rejection checks, and all proof-artifact correspondence checks.
-  The carrying commit records the revision; protocol induction remains pending.
+- `b053016`: arbitrary-schedule actor cursor and signal bounds, plus exact
+  imported protocol boundary/loop equations. The full serialized suite and kernel
+  axiom audit passed; pushed to `origin/main`.
+- Current checkpoint: imported client/server runtime preservation, all accepted
+  schedule induction, exact root result, and pending-reply authenticity. The
+  complete serialized suite passed under the same 2 GiB limit: 91 sequential
+  differential cases, 17 actor scenarios, replay, importer/rejection and
+  artifact-correspondence checks. The final theorem audit uses only `propext`,
+  `Classical.choice`, and `Quot.sound`, with no `sorryAx` or native execution
+  oracle. The carrying commit records this validated checkpoint.
 
 ## 1. Purpose and success criteria
 
@@ -561,6 +580,29 @@ such as priority messages until modeled. Rejection or declared abstraction must
 make such exclusions visible. Every profile must state whether it is an exact
 restricted model or a justified over-approximation; omitted behaviors must not
 silently strengthen verification claims.
+
+### Safety and progress assumptions for the closed exchange
+
+The first protocol target is the actual imported `actor_protocol:exchange/1`
+entry point in a closed world containing that module. Its initial system has one
+root process, empty mailboxes and signal queues, no links or monitors, and the
+specified fresh-identity counters. The payload must satisfy the model's public
+value predicate; opaque exception information is not an admissible payload.
+Safety is quantified over every finite accepted schedule, including arbitrary
+interleavings of pure steps, runtime requests, eligible deliveries, and logical
+time advances. It does not assume fairness and does not promise termination.
+
+A future eventual-reply theorem additionally needs an infinite, non-stuttering
+execution (or an appropriate maximal-execution definition), fair scheduling of
+continuously enabled process steps, and eventual delivery of each persistently
+eligible signal to a live endpoint. The closed environment must not add external
+messages, terminate endpoints, replace code, or exhaust resources. Infinite
+logical-time-only steps cannot substitute for process or delivery fairness.
+The exchange uses an infinite receive timeout, so its progress claim would not
+need clock divergence. A finite-timeout progress theorem would also need
+unbounded logical time and fair execution of enabled timeout transitions; neither
+would establish a wall-clock deadline on OTP. No liveness theorem is currently
+provided, and the bounded debugging scheduler proves none of these assumptions.
 
 ## 9. Module verification interface
 

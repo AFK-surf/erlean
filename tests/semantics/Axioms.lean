@@ -11,6 +11,7 @@ import Erlean.Logic.Segment
 import Erlean.Runtime.Invariants
 import Erlean.Runtime.SignalBounds
 import Erlean.Examples.ProtocolPhases
+import Erlean.Examples.ProtocolSafety
 
 #print axioms Erlean.Examples.identity_totalCorrect
 #print axioms Erlean.Examples.gleam_identity_totalCorrect
@@ -36,3 +37,6 @@ import Erlean.Examples.ProtocolPhases
 #print axioms Erlean.Examples.ProtocolInvariant.serverBoundary_program_halt
 #print axioms Erlean.Examples.ProtocolInvariant.clientWait_loop
 #print axioms Erlean.Examples.ProtocolInvariant.serverSendReply_loop
+#print axioms Erlean.Examples.ProtocolInvariant.exchange_allSchedules
+#print axioms Erlean.Examples.ProtocolInvariant.exchange_reply_correct
+#print axioms Erlean.Examples.ProtocolInvariant.exchange_pendingRepliesAuthentic
