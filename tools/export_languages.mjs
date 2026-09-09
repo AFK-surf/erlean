@@ -5,7 +5,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { delimiter, join } from 'node:path';
 
 const otp = execFileSync('asdf', ['where', 'erlang'], { encoding: 'utf8' }).trim();
-const env = { ...process.env, PATH: join(otp, 'bin') + delimiter + process.env.PATH };
+const env = { ...process.env, PATH: join(otp, 'bin') + delimiter + process.env.PATH,
+  ERL_COMPILER_OPTIONS: '[deterministic]' };
 const run = (...args) => execFileSync('asdf', ['exec', ...args], { env, encoding: 'utf8', stdio: 'pipe' });
 const hash = path => createHash('sha256').update(readFileSync(path)).digest('hex');
 const outRoot = process.argv[2] || 'tests/fixtures';
@@ -33,7 +34,8 @@ mkdirSync(elixirOutput, { recursive: true });
 run('elixir', 'tools/elixir_forms.exs', elixirSource, elixirOutput);
 run('escript', exporter, '--forms', join(elixirOutput, 'abstract.etf'), elixirOutput);
 provenance(elixirOutput, elixirSource, 'elixir', 'Elixir', '1.20.0',
-  ['debug_info=true', 'docs=false', 'Code.compile_file', 'debug_info:erlang_v1'],
+  ['debug_info=true', 'docs=false', 'ERL_COMPILER_OPTIONS=[deterministic]',
+   'Code.compile_string', 'repository-relative filename', 'debug_info:erlang_v1'],
   [{ name: 'abstract.etf', path: join(elixirOutput, 'abstract.etf') },
    { name: 'module.beam', path: join(elixirOutput, 'module.beam') }]);
 

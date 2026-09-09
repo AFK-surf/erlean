@@ -165,7 +165,8 @@ asdf plugins. `node tools/export_languages.mjs` regenerates both fixtures using
 the exact pins; `node tools/check_languages.mjs` verifies repeatability and hashes.
 Node.js is orchestration tooling, not part of the semantic model.
 
-Elixir uses `Code.compile_file` with `debug_info=true` and `docs=false`, then the
+Elixir uses `Code.compile_string` with an explicit repository-relative filename,
+`debug_info=true`, `docs=false`, and `ERL_COMPILER_OPTIONS=[deterministic]`, then the
 BEAM debug-info backend's `erlang_v1` callback to recover the compiler's Erlang
 abstract forms. This callback is implemented in the
 [pinned Elixir compiler source](https://github.com/elixir-lang/elixir/blob/v1.20.0/lib/elixir/src/elixir_erl.erl).
@@ -175,6 +176,11 @@ retained as generated output. This is reconstruction through the compiler's
 debug-info facility, not a claim that the recovered forms are independently
 proved equivalent to the BEAM. ETF input to `--forms` must be trusted local
 compiler output: the exporter does not sandbox arbitrary ETF data.
+
+Deterministic BEAM compilation excludes checkout-specific compiler metadata.
+The language adapter overrides ambient Erlang compiler options with the recorded
+option above. Reproducibility checks repeat extraction in a temporary checkout
+root and compare both artifacts and intermediates, including the companion BEAM.
 
 Gleam invokes `compile-package --target erlang --no-beam` on the dependency-free
 fixture package. The actual generated `_gleam_artefacts/gleam_identity.erl` is

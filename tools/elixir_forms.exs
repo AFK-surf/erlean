@@ -1,7 +1,8 @@
 [source, output] = System.argv()
 unless System.version() == "1.20.0", do: raise("Expected Elixir 1.20.0")
 Code.compiler_options(debug_info: true, docs: false)
-[{module, beam}] = Code.compile_file(source)
+# Preserve the repository-relative filename in debug info and BEAM provenance.
+[{module, beam}] = Code.compile_string(File.read!(source), source)
 {:ok, {^module, chunks}} = :beam_lib.chunks(beam, [:debug_info])
 {:debug_info_v1, backend, data} = Keyword.fetch!(chunks, :debug_info)
 {:ok, forms} = backend.debug_info(:erlang_v1, module, data, [])

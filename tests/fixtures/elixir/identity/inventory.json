@@ -1,1 +1,1 @@
-{"calls":{"erlang:get_module_info/1":1,"erlang:get_module_info/2":4},"constructs":{"alias":3,"call":5,"case":7,"clause":22,"cons":1,"fun":7,"literal":239,"module":1,"primop":7,"tuple":6,"values":4,"var":60},"dynamic_calls":0,"primops":{"match_fail":7}}
+{"calls":{"erlang:get_module_info/1":1,"erlang:get_module_info/2":4},"constructs":{"alias":3,"call":5,"case":7,"clause":22,"cons":1,"fun":7,"literal":241,"module":1,"primop":7,"tuple":6,"values":4,"var":60},"dynamic_calls":0,"primops":{"match_fail":7}}

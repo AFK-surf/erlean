@@ -30,7 +30,13 @@ outputs are not cached; source-language installations are cached against the
 toolchain and workflow definitions. Permissions are read-only, action references
 are commit-pinned, superseded runs are cancelled, and asdf compilation is capped
 at two workers alongside the existing one-worker/2 GiB Lean limits. Workflow
-lint and the first hosted run are the remaining checks for this checkpoint.
+lint passed; the first hosted run is in progress. Review caught checkout-specific
+metadata in the Elixir companion BEAM. The adapter now uses an explicit relative
+filename and deterministic BEAM compilation, records those compiler options, and
+tests byte equality after relocating the fixture inputs to a temporary root.
+Relocation checks and the full local suite passed with refreshed artifact
+provenance. The emitted executable Elixir module literal is unchanged. The
+remaining validation is the fresh hosted workflow run.
 
 ### Validated example layout
 
@@ -374,8 +380,11 @@ serialized through the primary agent.
 - `db1633a`: move 31 example modules into topic directories and update
   all source imports, artifact check paths, and documentation. Preserve theorem
   declaration names and generated artifact contents.
-- Current checkpoint: GitHub Actions configuration for cold kernel checking,
+- `f22f33f`: GitHub Actions configuration for cold kernel checking,
   complete compatibility tests, and retained-artifact reproducibility.
+- Current checkpoint: deterministic, checkout-independent language extraction
+  with a relocation regression and refreshed provenance. Workflow lint and the
+  complete local suite passed; hosted execution is being verified.
 
 ## 1. Purpose and success criteria
 
