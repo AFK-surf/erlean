@@ -157,6 +157,22 @@ including return/catch boundary examples, 112 map cases, 39 finite-float cases,
 and all existing sequential, actor, and graph checks. The complete cached suite
 peaked at 175.3 MiB with no swap. New laws use only the existing standard kernel axioms.
 
+Validated proof-tool checkpoint: singleton-map matching and selected-field
+observation rules do not require equality for unrelated float and function payloads.
+The decoder and shared oracle accept emitted `cons` JSON, including improper lists.
+Callers need no list-format conversion before resubmitting returned opaque data.
+The decoder's nesting-depth limit still applies. A flattened list can exceed
+that limit when encoded as nested cons cells. No universal codec inverse is proved.
+This is a codec closure fix within the depth budget, not a new runtime value kind.
+Serial compilation passed with a 510.7 MiB peak. The full regression suite passed
+with a 161.6 MiB peak and no swap, including the new six-theorem axiom audit.
+Round-trip compatibility tests feed each producer's unmodified output to both
+consumers. They cover nested maps, proper and improper lists, finite floats,
+partial bitstrings, malformed cons objects, and atomic batch failure.
+All 112 map, 39 float, 91 sequential, 17 actor, and 28 graph/input checks passed.
+Next work extends reusable execution composition as concrete proof clients need it.
+Build logic and the supported runtime operation profile remain unchanged.
+
 ### Previous work: reusable controller verification support (2026-09-09)
 
 The current cleanup moves all-trace exactness into `Controller.Trace.exact`.

@@ -94,7 +94,9 @@ Arguments are a JSON array of tagged RawCore terms. Integers use decimal
 `{"tag":"atom","value":"ok"}`, tuples use `{"tag":"tuple","items":[...]}`,
 and lists use `{"tag":"list","items":[...],"tail":{"tag":"nil"}}`.
 The empty list is `{"tag":"nil"}`. Returned nonempty lists are printed as nested
-`cons` objects, rather than the flattened input representation. See the
+`{"tag":"cons","head":...,"tail":...}` objects. The decoder also accepts this
+form, so returned values need no list-format conversion before another call.
+Both forms remain subject to the decoder's nesting-depth limit. See the
 [term schema](docs/otp29-import.md#rawcore-version-1) for details; transport support
 for a term does not imply executable support.
 

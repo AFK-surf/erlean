@@ -101,6 +101,8 @@ decode(#{<<"tag">> := <<"tuple">>, <<"items">> := Items}) ->
     list_to_tuple([decode(X) || X <- Items]);
 decode(#{<<"tag">> := <<"map">>, <<"entries">> := Entries}) ->
     maps:from_list([{decode(K), decode(V)} || [K, V] <- Entries]);
+decode(#{<<"tag">> := <<"cons">>, <<"head">> := Head, <<"tail">> := Tail}) ->
+    [decode(Head) | decode(Tail)];
 decode(#{<<"tag">> := <<"list">>, <<"items">> := Items, <<"tail">> := Tail}) ->
     lists:foldr(fun(X, Acc) -> [decode(X) | Acc] end, decode(Tail), Items).
 

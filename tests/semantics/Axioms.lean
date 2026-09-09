@@ -10,6 +10,7 @@ import Erlean.Examples.Protocol.Basic
 import Erlean.Semantics.Preservation
 import Erlean.Semantics.VariableSafety
 import Erlean.Core.Maps
+import Erlean.Core.MapPatterns
 import Erlean.Semantics.Maps
 import Erlean.Logic.Segment
 import Erlean.Logic.Frames
@@ -79,6 +80,12 @@ import Erlean.Examples.Dijkstra.Correctness
 #print axioms Erlean.Semantics.run_halt
 #print axioms Erlean.Logic.stepLocal_next_appendStack
 #print axioms Erlean.Logic.reachesBoundary_appendStack
+#print axioms Erlean.Core.matchPattern_map_singleton
+#print axioms Erlean.Core.patternObservationAllowed_map_singleton
+#print axioms Erlean.Core.literalObservationAllowed_atom_public
+#print axioms Erlean.Core.literalObservationAllowed_bitstring_public
+#print axioms Erlean.Core.patternObservationAllowed_map_atom
+#print axioms Erlean.Core.patternObservationAllowed_map_bitstring
 #print axioms Erlean.Semantics.mapBuiltin_remove
 #print axioms Erlean.Core.Value.public_of_exactComparable
 #print axioms Erlean.Core.FloatBits.parseHex_finite

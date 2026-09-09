@@ -1,6 +1,7 @@
 import Erlean.Semantics.Machine
 import Erlean.Semantics.Observation
 import Erlean.Core.Equality
+import Erlean.Core.MapPatterns
 
 open Erlean.Core Erlean.Semantics
 
@@ -33,6 +34,17 @@ example : patternObservationAllowed (.map [key] [.var 7])
     (.map [(key, funValue)]) = true := by map_check
 example : patternObservationAllowed (.lit (.map [(key, funValue)]))
     (.map [(key, funValue)]) = false := by map_check
+
+-- Scalar-field discrimination does not assign equality to function values.
+example : patternObservationAllowed (.map [key] [.lit (.atom "ready")])
+    (.map [(key, funValue)]) = true := by
+  apply patternObservationAllowed_map_atom
+  map_check
+
+example : matchPattern (.map [key] [.lit (.atom "ready")])
+    (.map [(key, funValue)]) = none := by
+  rw [matchPattern_map_singleton key _ _ (by map_check)]
+  simp [key, funValue, FiniteMap.lookup, matchPattern, BEq.beq, Value.equal]
 
 -- Raw malformed representations never become public comparable maps.
 example : (Value.map [(key, .nil), (key, .nil)]).isPublic = false := by map_check

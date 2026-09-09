@@ -51,6 +51,9 @@ def decodeTerm : Nat → Lean.Json → Except String Term
     | "list" =>
       let items ← (← (← field j "items").getArr?).toList.mapM (decodeTerm depth)
       return .list items (← decodeTerm depth (← field j "tail"))
+    | "cons" =>
+      let head ← decodeTerm depth (← field j "head")
+      return .list [head] (← decodeTerm depth (← field j "tail"))
     | "map" =>
       let entries ← (← (← field j "entries").getArr?).toList.mapM fun pair => do
         let xs ← pair.getArr?

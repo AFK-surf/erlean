@@ -71,6 +71,13 @@ improper tails.
 | map | `{"tag":"map","entries":[[KEY,VALUE]]}` |
 | bitstring | `{"tag":"bitstring","bits":"3","hex":"a0"}` |
 
+The CLI emits nonempty lists as nested
+`{"tag":"cons","head":TERM,"tail":TERM}` objects. The RawCore decoder also
+accepts this form, including improper tails. Both list forms remain subject to
+the decoder's nesting-depth limit. A long flattened list can exceed this limit
+when encoded as nested cons cells. Compatibility tests do not establish a
+round-trip theorem for all accepted inputs.
+
 Float bits are the big-endian 64-bit IEEE representation. Bitstring bytes are in
 source bit order, padded with zero bits at the right to a byte boundary; `bits`
 records the original length. Hex strings are lowercase. Map entries are sorted

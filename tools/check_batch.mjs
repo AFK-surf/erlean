@@ -106,6 +106,30 @@ try {
   assert.notDeepEqual(normalizeTermJson(transport[0]),
     normalizeTermJson({ tag: 'float', bits: '0000000000000000' }));
 
+  const listPayloads = [
+    { tag: 'list', items: [integer(1), transport[0]], tail: nil },
+    { tag: 'list', items: [transport[2]], tail: atom('improper_tail') },
+    { tag: 'map', entries: [[atom('nested'),
+      { tag: 'list', items: [transport[2], transport[1]], tail: nil }]] },
+  ];
+  const identityCases = values => values.map(value => ({ function: 'identity', arguments: [value] }));
+  const firstLean = successful(batch(identity, identityCases(listPayloads)));
+  const firstOtp = successful(oracleBatch(source, identityCases(listPayloads)));
+  assert.deepEqual(normalizeTermJson(firstLean), normalizeTermJson(firstOtp));
+  assert.equal(firstLean[0].values[0].tag, 'cons');
+  // Feed each producer's actual output straight back to both consumers. Do not
+  // normalize or rewrite the value before decoding it again.
+  for (const produced of [firstLean, firstOtp]) {
+    const again = identityCases(produced.map(result => result.values[0]));
+    assert.deepEqual(successful(batch(identity, again)), firstLean);
+    assert.deepEqual(successful(oracleBatch(source, again)), firstOtp);
+  }
+  for (const malformed of [{ tag: 'cons', tail: nil }, { tag: 'cons', head: atom('head') }]) {
+    const invalidCases = [identities[0], ...identityCases([malformed])];
+    failed(batch(identity, invalidCases), 1, /erlean:/);
+    failed(oracleBatch(source, invalidCases), 1, /otp_oracle:/);
+  }
+
   failed(batch(sequential, [cases[0], { function: 'identity' }]), 1, /arguments/);
   failed(batch(sequential, [cases[0], { function: 7, arguments: [] }]), 1, /erlean:/);
   failed(batch(sequential, [cases[0], { function: 'identity', arguments: 'not_an_array' }]), 1, /erlean:/);
