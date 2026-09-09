@@ -21,7 +21,7 @@ theorem Value.public_of_exactComparable (value : Value)
       simpa only [Value.exactComparable, Bool.and_eq_true] using comparable
     simp only [Value.isPublic, parts.1, Bool.true_and]
     exact Value.publicEntries_of_comparableEntries entries parts.2
-  | .function _ _ _ | .closure _ _ _ _ | .exceptionInfo _ =>
+  | .function _ _ _ | .closure _ _ _ _ | .exceptionInfo _ | .floatBits _ =>
     simp [Value.exactComparable] at comparable
   | .integer _ | .atom _ | .nil | .bitstring _ | .pid _ | .reference _ =>
     simp [Value.isPublic]
@@ -82,7 +82,7 @@ theorem Value.equal_eq_true (left right : Value)
       simpa only [Value.equal, Value.map.injEq] using
         Value.equalEntries_eq_true entries others parts.2
     | _ => simp [Value.equal]
-  | .function _ _ _ | .closure _ _ _ _ | .exceptionInfo _ =>
+  | .function _ _ _ | .closure _ _ _ _ | .exceptionInfo _ | .floatBits _ =>
     simp [Value.exactComparable] at comparable
 termination_by sizeOf left
 

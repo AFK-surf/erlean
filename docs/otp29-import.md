@@ -119,9 +119,16 @@ tuples inside literals remain literal terms and must not be interpreted as synta
 
 The Lean execution profile accepts integer, atom, list, tuple, canonical bitstring,
 and finite-map literals. It also supports alias patterns, finite closures, and
-the restricted binary segments described in the design tracker. Float execution
-and unlisted runtime operations remain unsupported. Literal transport is broader
+the restricted binary segments described in the design tracker. Finite binary64
+floats can be transported without arithmetic or observable equality. Unlisted
+runtime operations remain unsupported. Literal transport is broader
 than executable semantics.
+
+Float inputs use exactly sixteen hexadecimal digits in the RawCore `bits` field.
+The model retains negative zero and subnormal encodings. NaNs and infinities are
+rejected. Returned floats use sixteen lowercase digits. No host decimal conversion
+occurs. Float literal patterns, including floats nested in literal containers,
+are unsupported. Variable and wildcard patterns can carry float payloads.
 
 Maps use canonical unique data keys. Keys can be integers, atoms, lists, tuples,
 bitstrings, pids, or references. Map, float, and function keys are unsupported,

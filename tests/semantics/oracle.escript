@@ -33,6 +33,9 @@ load_artifact(Source) ->
     end.
 
 decode(#{<<"tag">> := <<"integer">>, <<"value">> := Value}) -> binary_to_integer(Value);
+decode(#{<<"tag">> := <<"float">>, <<"bits">> := Hex}) ->
+    <<Value:64/float>> = binary:decode_hex(Hex),
+    Value;
 decode(#{<<"tag">> := <<"atom">>, <<"value">> := Value}) -> binary_to_atom(Value);
 decode(#{<<"tag">> := <<"nil">>}) -> [];
 decode(#{<<"tag">> := <<"bitstring">>, <<"bits">> := Count, <<"hex">> := Hex}) ->
@@ -47,6 +50,8 @@ decode(#{<<"tag">> := <<"list">>, <<"items">> := Items, <<"tail">> := Tail}) ->
     lists:foldr(fun(X, Acc) -> [decode(X) | Acc] end, decode(Tail), Items).
 
 encode(X) when is_integer(X) -> #{tag => integer, value => integer_to_binary(X)};
+encode(X) when is_float(X) ->
+    #{tag => float, bits => binary:encode_hex(<<X:64/float>>, lowercase)};
 encode(X) when is_atom(X) -> #{tag => atom, value => atom_to_binary(X)};
 encode([]) -> #{tag => nil};
 encode([H | T]) -> #{tag => cons, head => encode(H), tail => encode(T)};

@@ -67,6 +67,8 @@ import Erlean.Examples.Dijkstra.Correctness
 #print axioms Erlean.Semantics.mapBuiltin_get
 #print axioms Erlean.Semantics.mapBuiltin_remove
 #print axioms Erlean.Core.Value.public_of_exactComparable
+#print axioms Erlean.Core.FloatBits.parseHex_finite
+#print axioms Erlean.Core.FloatBits.encodeHex_length
 #print axioms Erlean.Logic.Controller.Trace.safe
 #print axioms Erlean.Logic.Controller.Trace.exact
 #print axioms Erlean.Logic.Controller.trace_of_refinement

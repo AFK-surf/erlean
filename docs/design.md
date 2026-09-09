@@ -59,13 +59,13 @@ the missing OTP term order. Differential tests cover this rejection separately.
 The float-free comparable profile also supports `==`, `/=`, and `=/=`.
 `is_binary/1` accepts only whole-byte bitstrings. Neither addition permits floats
 or function equality. The key algebra, value bridges, importer, map matching,
-and execution machine have compiled. Full regression validation remains pending.
+and execution machine passed the full regression suite at the map checkpoint below.
 
 Checkpoint: the independent `Core.MapKey` and `Core.FiniteMap` modules passed
 serial compilation and a focused axiom audit. Their laws use only `propext`,
 `Classical.choice`, and `Quot.sound`. This foundation checkpoint does not enable
-map execution by itself. Syntax integration and execution regressions
-remain in progress. The original Dijkstra stepping proofs now pass without
+map execution by itself. The later integration checkpoint validates execution.
+The original Dijkstra stepping proofs now pass without
 changes to their statements, scripts, or budgets. Name-first BIF dispatch avoids
 the large joint name/argument matcher that exhausted proof simplification.
 Map execution and lexical preservation also compiled with the default proof
@@ -78,17 +78,19 @@ Before interruption, two `leanchecker` processes used about 5.6 and 4.6 GiB RSS.
 Their ownership and connection to the OOM are not established. Kernel logs were
 not accessible, so these observations do not identify the cause. Run subsequent
 builds only through `node tools/build.mjs`, serially through the primary agent,
-with one Lean worker and the existing 2 GiB compiler cap. Check host memory and
-active processes before each verification phase. Subagents must not run builds
-or test suites. Do not count interrupted checks as passing results.
+with one Lean worker and the existing 2 GiB compiler cap. Subagents must not run
+builds or test suites. Do not count interrupted checks as passing results.
 
 The first recovery build stopped at ordinary Lean errors in the independent
 float helper, before CLI validation. The parser safety proof now reduces its
 local binding before splitting. Closed parser examples use definitional
 equality instead of requiring an `Except` equality decision instance. These
-edits remain unvalidated. A subsequent resource check found several concurrent
-Rust linkers and elevated memory pressure. Defer the next compilation while
-that pressure persists. Do not terminate processes with unconfirmed ownership.
+edits subsequently compiled. Resource policy now limits this task alone.
+Do not monitor other tasks. Run each complete verification process tree in a
+transient systemd unit with `MemoryMax=3500M` and `MemorySwapMax=0`. This reserves
+headroom within the task's 4 GiB budget. Keep all checks serial and retain the
+per-compiler 2 GiB cap. The uncapped float build was interrupted and restarted
+inside that unit. Build scripts remain unchanged.
 
 Validated checkpoint: the CLI uses mutually recursive value and entry encoders
 with kernel-checked termination. The full `node tools/check_all.mjs` suite passed
@@ -98,10 +100,27 @@ and all 28 graph/input checks. Fresh map exports match the retained artifacts.
 The axiom audit admits only the existing standard kernel axioms. Testing remains
 compatibility evidence, not a universal equivalence proof.
 
-Next: add finite-float transport for ordinary data payloads. The independent
-float codec helper compiled, but execution integration and fixture validation
-remain pending. Keep application-specific operations and proof obligations in
-their owning repositories.
+Current implementation: finite-float transport for ordinary data payloads.
+The value stores raw binary64 bits. Public transport admits finite encodings
+only, including signed zero and subnormals. Internal structural comparison
+preserves syntax identity but is not observable Erlang float equality.
+Float comparison, arithmetic, literal patterns, and map keys remain unsupported.
+Composite keys and literal patterns containing floats are also rejected.
+The codec's parser safety and output-width lemmas do not prove codec round-trip
+correctness. Bit-exact differential tests check transport separately.
+The integrated build and full `node tools/check_all.mjs` suite passed. The float
+fixture adds 39 bit-exact OTP 29.0.6 cases, including a source literal, nested
+containers, signed zero, subnormals, and the largest finite values. Rejection
+checks cover numeric operations, comparisons, keys, nonfinite inputs, and malformed
+encodings. The importer rejects nested float literal patterns. All prior map,
+sequential, actor, and graph checks still pass. The final bounded build peaked
+at 626.5 MiB and the complete cached validation at 179.9 MiB, with no swap.
+The universal parser-safety and output-width lemmas passed the axiom audit.
+
+Next: extend generic proof rules only when an executable contract needs them.
+Keep application-specific operations and integration progress in their owning
+repositories. No floating-point arithmetic or comparison implementation is planned
+as part of this transport checkpoint.
 
 Subagents author key/map algebra and compatibility fixtures. The primary agent
 owns machine/importer integration and all serial builds and tests. Build scripts

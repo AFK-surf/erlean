@@ -218,14 +218,17 @@ def builtin (state : LocalState) (name : String) (args : Values) :
     | _ => unknown
   | "+" => match args with
     | [.integer a, .integer b] => ret (.integer (a + b))
+    | [.floatBits _, _] | [_, .floatBits _] => unsupported "Floating-point arithmetic"
     | [_, _] => badarith
     | _ => unknown
   | "-" => match args with
     | [.integer a, .integer b] => ret (.integer (a - b))
+    | [.floatBits _, _] | [_, .floatBits _] => unsupported "Floating-point arithmetic"
     | [_, _] => badarith
     | _ => unknown
   | "*" => match args with
     | [.integer a, .integer b] => ret (.integer (a * b))
+    | [.floatBits _, _] | [_, .floatBits _] => unsupported "Floating-point arithmetic"
     | [_, _] => badarith
     | _ => unknown
   | "=<" => match args with
@@ -234,12 +237,12 @@ def builtin (state : LocalState) (name : String) (args : Values) :
   | "=:=" | "==" => match args with
     | [a, b] =>
       if a.exactComparable && b.exactComparable then ret (boolean (a == b))
-      else unsupported "Exact equality involving function identity or exception information"
+      else unsupported "Equality involving floats, function identity, or exception information"
     | _ => unknown
   | "=/=" | "/=" => match args with
     | [a, b] =>
       if a.exactComparable && b.exactComparable then ret (boolean (!(a == b)))
-      else unsupported "Equality involving function identity or exception information"
+      else unsupported "Equality involving floats, function identity, or exception information"
     | _ => unknown
   | "and" => match args with
     | [.atom a, .atom b] =>

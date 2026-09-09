@@ -8,6 +8,7 @@ mutual
 def literalObservationAllowed (expected value : Value) : Bool :=
   match expected, value with
   | .exceptionInfo _, _ | _, .exceptionInfo _ => false
+  | .floatBits _, .floatBits _ => false
   | .function _ _ _, .function _ _ _ | .closure _ _ _ _, .closure _ _ _ _ => false
   | .cons head tail, .cons first rest =>
     literalObservationAllowed head first &&

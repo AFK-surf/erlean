@@ -20,3 +20,6 @@
   `node tools/build.mjs` for dependency-ordered builds with one compilation at a
   time. Do not run overlapping Lake builds or test suites from subagents.
   Lean compiler processes are capped at 2 GiB and one worker thread.
+- Keep this task's total memory below 4 GiB. On this host, place the complete
+  verification process tree in a transient systemd unit capped at 3500 MiB,
+  with swap disabled, to leave overhead headroom. Do not monitor other tasks.

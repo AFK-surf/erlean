@@ -53,7 +53,7 @@ def lowerValue : Nat → Term → Except String Value
     | .list items tail =>
       let items ← items.mapM (lowerValue fuel)
       return items.foldr Value.cons (← lowerValue fuel tail)
-    | .float _ => throw "Unsupported literal: float"
+    | .float bits => return .floatBits (← FloatBits.parseHex bits)
     | .bitstring bits hex => lowerBitstring bits hex
     | .map entries =>
       let entries ← entries.mapM fun (key, value) => do
@@ -148,7 +148,11 @@ private def lowerPattern : Nat → NameScope → Term → Except String Pattern
     | .tuple [.atom "c_var", _, name] => return .var (← lookup scope name)
     | .tuple [.atom "c_alias", _, binder, pattern] =>
       return .alias (← lookup scope (← variableName binder)) (← lowerPattern fuel scope pattern)
-    | .tuple [.atom "c_literal", _, value] => return .lit (← lowerValue fuel value)
+    | .tuple [.atom "c_literal", _, value] =>
+      let value ← lowerValue fuel value
+      unless value.exactComparable do
+        throw "Unsupported literal pattern: floating-point comparison"
+      return .lit value
     | .tuple [.atom "c_cons", _, head, tail] =>
       return .cons (← lowerPattern fuel scope head) (← lowerPattern fuel scope tail)
     | .tuple [.atom "c_tuple", _, items] =>

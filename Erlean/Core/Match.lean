@@ -132,22 +132,22 @@ theorem matchPattern_keys (pattern : Pattern) (value : Value) (env : Env)
       | some values =>
           simpa [Pattern.binders] using
             matchPatterns_keys patterns values env (by simpa [matchPattern, hd] using h)
-  | .bytes _, .integer _ | .bytes _, .atom _ | .bytes _, .nil
+  | .bytes _, .integer _ | .bytes _, .floatBits _ | .bytes _, .atom _ | .bytes _, .nil
   | .bytes _, .cons _ _ | .bytes _, .tuple _ | .bytes _, .function _ _ _
   | .bytes _, .closure _ _ _ _ | .bytes _, .exceptionInfo _
   | .bytes _, .pid _ | .bytes _, .reference _
   | .cons _ _, .pid _ | .cons _ _, .reference _
   | .tuple _, .pid _ | .tuple _, .reference _ => simp [matchPattern] at h
-  | .cons _ _, .integer _ | .cons _ _, .atom _ | .cons _ _, .nil
+  | .cons _ _, .integer _ | .cons _ _, .floatBits _ | .cons _ _, .atom _ | .cons _ _, .nil
   | .cons _ _, .tuple _ | .cons _ _, .bitstring _ | .cons _ _, .function _ _ _
   | .cons _ _, .closure _ _ _ _
   | .cons _ _, .exceptionInfo _
-  | .tuple _, .integer _ | .tuple _, .atom _ | .tuple _, .nil
+  | .tuple _, .integer _ | .tuple _, .floatBits _ | .tuple _, .atom _ | .tuple _, .nil
   | .tuple _, .cons _ _ | .tuple _, .bitstring _ | .tuple _, .function _ _ _ =>
       simp [matchPattern] at h
   | .tuple _, .closure _ _ _ _ | .tuple _, .exceptionInfo _ => simp [matchPattern] at h
   | .cons _ _, .map _ | .tuple _, .map _ | .bytes _, .map _
-  | .map _ _, .integer _ | .map _ _, .atom _ | .map _ _, .nil
+  | .map _ _, .integer _ | .map _ _, .floatBits _ | .map _ _, .atom _ | .map _ _, .nil
   | .map _ _, .cons _ _ | .map _ _, .tuple _ | .map _ _, .bitstring _
   | .map _ _, .pid _ | .map _ _, .reference _ | .map _ _, .function _ _ _
   | .map _ _, .closure _ _ _ _ | .map _ _, .exceptionInfo _ => simp [matchPattern] at h

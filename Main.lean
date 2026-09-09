@@ -31,6 +31,9 @@ private def encodeKey : MapKey → Lean.Json
 mutual
 private def encodeValue : Value → Except String Lean.Json
   | .integer value => pure (Lean.Json.mkObj [("tag", string "integer"), ("value", string (toString value))])
+  | .floatBits bits => do
+    unless FloatBits.isFinite bits do throw "Nonfinite float cannot be serialized"
+    return Lean.Json.mkObj [("tag", string "float"), ("bits", string (FloatBits.encodeHex bits))]
   | .atom value => pure (Lean.Json.mkObj [("tag", string "atom"), ("value", string value)])
   | .nil => pure (Lean.Json.mkObj [("tag", string "nil")])
   | .cons head tail => do

@@ -8,6 +8,9 @@ namespace Erlean.Core.Value
 @[simp] theorem isPublic_integer (n : Int) :
     (.integer n : Value).isPublic = (true) := by rw [Value.isPublic]
 
+@[simp] theorem isPublic_floatBits (bits : UInt64) :
+    (.floatBits bits : Value).isPublic = FloatBits.isFinite bits := by rw [Value.isPublic]
+
 @[simp] theorem isPublic_atom (name : String) :
     (.atom name : Value).isPublic = (true) := by rw [Value.isPublic]
 
@@ -44,6 +47,9 @@ namespace Erlean.Core.Value
 
 @[simp] theorem exactComparable_integer (n : Int) :
     (.integer n : Value).exactComparable = (true) := by rw [Value.exactComparable]
+
+@[simp] theorem exactComparable_floatBits (bits : UInt64) :
+    (.floatBits bits : Value).exactComparable = (false) := by rw [Value.exactComparable]
 
 @[simp] theorem exactComparable_atom (name : String) :
     (.atom name : Value).exactComparable = (true) := by rw [Value.exactComparable]

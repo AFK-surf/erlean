@@ -102,7 +102,7 @@ def main : IO Unit := do
   expect (bifCall "=:=" [.lit (.tuple [.integer 7]), .lit (.tuple [.integer 7])])
     (.returned [.atom "true"]) "exact equality accepts structural data"
   expect (bifCall "=:=" [.lit (.function "m" "f" 0), .lit (.function "m" "f" 0)])
-    (.fault (.unsupported "Exact equality involving function identity or exception information"))
+    (.fault (.unsupported "Equality involving floats, function identity, or exception information"))
     "exact equality must not expose structural function identity"
   expect (.letE [7] (.lit (.integer 99))
       (.tryE (.letE [8] (.lit (.integer 1)) (errorE "original")) [8] (.var 8)

@@ -1,4 +1,5 @@
 import Erlean.Core.FiniteMap
+import Erlean.Core.FloatBits
 
 namespace Erlean.Core
 
@@ -8,6 +9,9 @@ abbrev VarId := Nat
     information. Presence of a value constructor does not imply public transport. -/
 inductive Value where
   | integer (value : Int)
+  /-- IEEE-754 binary64 transport. Only finite bit patterns are public. Numeric
+      operations and observable float equality remain outside the profile. -/
+  | floatBits (bits : UInt64)
   | atom (name : String)
   | nil
   | cons (head tail : Value)
@@ -28,11 +32,13 @@ inductive Value where
   deriving Repr
 
 mutual
-/-- Structural comparison for the restricted value profile, kept transparent
-    to proof rewriting rather than using a nested deriving handler. -/
+/-- Internal structural comparison, kept transparent to proof rewriting rather
+    than using a nested deriving handler. Float bits and function metadata are
+    compared as representations, not as observable Erlang numeric/fun equality. -/
 def Value.equal (left right : Value) : Bool :=
   match left, right with
   | .integer a, .integer b => a == b
+  | .floatBits a, .floatBits b => a == b
   | .atom a, .atom b => a == b
   | .nil, .nil => true
   | .cons a b, .cons c d => a.equal c && b.equal d
@@ -116,8 +122,9 @@ termination_by keys => sizeOf keys
 end
 
 mutual
-/-- Public data excludes internal exception information. Closure environments
-    remain opaque, since ordinary function values do not expose their captures. -/
+/-- Public data excludes internal exception information and nonfinite floats.
+    Closure environments remain opaque, since ordinary function values do not
+    expose their captures. -/
 def Value.isPublic (value : Value) : Bool :=
   match value with
   | .exceptionInfo _ => false
@@ -125,6 +132,7 @@ def Value.isPublic (value : Value) : Bool :=
   | .tuple values => Value.publicList values
   | .map entries => Value.mapOrdered entries && Value.publicEntries entries
   | .integer _ => true
+  | .floatBits bits => FloatBits.isFinite bits
   | .atom _ => true
   | .nil => true
   | .bitstring _ => true
@@ -148,10 +156,11 @@ termination_by sizeOf entries
 end
 
 mutual
-/-- Exact comparison is supported for data only; fun identity is unmodeled. -/
+/-- Exact comparison excludes floats and functions. Raw float-bit identity is
+    not Erlang float equality, and fun identity remains unmodeled. -/
 def Value.exactComparable (value : Value) : Bool :=
   match value with
-  | .exceptionInfo _ | .function _ _ _ | .closure _ _ _ _ => false
+  | .exceptionInfo _ | .function _ _ _ | .closure _ _ _ _ | .floatBits _ => false
   | .cons head tail => head.exactComparable && tail.exactComparable
   | .tuple values => Value.comparableList values
   | .map entries => Value.mapOrdered entries && Value.comparableEntries entries

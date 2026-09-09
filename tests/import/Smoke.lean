@@ -37,7 +37,10 @@ def main : IO Unit := do
   expectError (decodeTerm 0 Lean.Json.null) "depth limit"
   expectError (lowerExpr 64 [] (record "c_var" [.integer 99])) "unbound variable"
   expectError (lowerExpr 64 [] (record "c_receive" [])) "unsupported construct"
-  expectError (lowerValue 64 (.float "3ff0000000000000")) "unsupported value profile"
+  assertTrue (isOkEq (lowerValue 64 (.float "3ff0000000000000"))
+    (.floatBits 4607182418800017408)) "finite float transport"
+  for bits in ["7ff0000000000000", "fff0000000000000", "7ff8000000000000001"] do
+    expectError (lowerValue 64 (.float bits)) "nonfinite or malformed float"
   expectError (lowerBitstring 3 "a1") "nonzero bitstring padding"
   expectError (lowerBitstring 8 "zz") "invalid bitstring digit"
   assertTrue (isOkEq (lowerBitstring 3 "a0") (.bitstring [true, false, true]))
@@ -48,6 +51,12 @@ def main : IO Unit := do
   expectError (lowerExpr 64 [] (record "c_primop"
     [record "c_literal" [.atom "recv_marker_reserve"], .nil])) "unsupported later-stage primop"
   let literal := fun value => record "c_literal" [value]
+  for value in [Term.float "3ff0000000000000", .tuple [.float "3ff0000000000000"],
+      .map [(.atom "payload", .float "3ff0000000000000")]] do
+    expectError (lowerExpr 64 [] (record "c_case" [literal .nil,
+      .list [record "c_clause" [.list [literal value] .nil,
+        literal (.atom "true"), literal (.atom "ok")]] .nil]))
+      "float literal pattern comparison is outside the profile"
   let mapEntries : List (Term × Term) := [(.atom "b", .integer 2), (.atom "a", .integer 1)]
   let canonicalMap := Value.map
     (FiniteMap.insert (.atom "a") (.integer 1)
@@ -60,7 +69,8 @@ def main : IO Unit := do
     (.map [(.atom "a", .integer 1)])) "duplicate literal map keys overwrite earlier entries"
   assertTrue (isOkEq (lowerValue 64 (.map [(.atom "nested", .map mapEntries)]))
     (.map [(.atom "nested", canonicalMap)])) "nested map values remain supported"
-  for key in [Term.map [], .float "3ff0000000000000", .tuple [.map []]] do
+  for key in [Term.map [], .float "3ff0000000000000", .tuple [.map []],
+      .tuple [.float "3ff0000000000000"]] do
     expectError (lowerValue 64 (.map [(key, .nil)])) "unsupported literal map key"
   let mapPair := fun operation key value => record "c_map_pair" [literal operation, key, value]
   let mapExpr := fun pairs => record "c_map" [literal (.map []), .list pairs .nil, .atom "false"]

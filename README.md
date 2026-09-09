@@ -13,6 +13,8 @@ and direct lookup/update BIFs. Reusable proofs cover canonical form, lookup fram
 rules, public-value preservation, and extensional equality. See the
 [map profile](docs/otp29-import.md#manifest-and-inventory) for unsupported keys
 and exact-update failure restrictions.
+Finite floats can cross payload containers without losing their binary64 bits.
+Float arithmetic, comparison, and map keys remain outside the execution profile.
 The byte codec has a bounded-input round-trip proof. The restricted actor runtime
 supports explicit scheduling, signal delivery, receive, monitor/link lifecycle,
 and replay. Tests include 91 sequential cases and 17 actor scenarios against OTP;
