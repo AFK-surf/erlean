@@ -20,15 +20,21 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current checkpoint: executable usage tutorial (2026-09-09)
+### Current checkpoint: generic usage tutorial (2026-09-09)
 
 The README now provides an English walkthrough of dependency setup, retained
-artifact execution, universal Dijkstra theorem reuse, fresh OTP import and Lean
+artifact execution, identity function contract reuse, fresh OTP import and Lean
 literal emission, linked calls, actor recording/replay, and validation. It
 distinguishes the minimal Lean/Node setup from source-language dependencies and
-keeps the existing semantic and compiler trust boundaries explicit.
+keeps the existing semantic and compiler trust boundaries explicit. Following
+user feedback, algorithm-specific walkthroughs were removed from the README;
+Dijkstra is now a peer link alongside the other examples. The replacement
+arbitrary-value identity contract snippet passed kernel checking with one worker
+and a 2 GiB cap; its axiom audit reports only `propext` and `Quot.sound`. Local
+README link targets and `git diff --check` also passed. No implementation changed.
 
-Documentation checks passed: all tutorial execution commands, a fresh OTP 29.0.6
+At the preceding tutorial checkpoint, documentation checks passed: all tutorial
+execution commands, a fresh OTP 29.0.6
 identity export, generated literal kernel checking, the arbitrary-graph Lean
 proof snippet and axiom audit, linked execution, actor recording/replay, local
 Markdown link targets, and `git diff --check`. Lean checks ran serially with one
@@ -331,9 +337,13 @@ serialized through the primary agent.
   The final implementation theorem depends only on `propext`, `Classical.choice`,
   and `Quot.sound`; there are no custom axioms, `sorryAx`, or native execution
   oracles; pushed to `origin/main`.
-- Current checkpoint: English README usage tutorial with executed CLI examples,
+- `afd188b`: English README usage tutorial with executed CLI examples,
   fresh import/emission, and a kernel-checked arbitrary-graph proof snippet.
-  The carrying commit records the documentation-only checks described above.
+  Pushed to `origin/main`.
+- Current checkpoint: generic README workflow using an identity contract, with
+  specialized examples reduced to links. The replacement proof snippet, axiom
+  audit, local links, and whitespace checks passed; no full-suite rerun was
+  needed for this documentation-only revision.
 
 ## 1. Purpose and success criteria
 

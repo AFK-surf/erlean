@@ -21,31 +21,6 @@ verification interfaces, and implementation milestones.
 
 All repository content is maintained in English.
 
-## Verified Dijkstra example
-
-[dijkstra.erl](tests/fixtures/erlang/dijkstra.erl) implements Dijkstra using a
-sorted list queue and consumes outgoing edges when a vertex is settled. Its API
-is `dijkstra:distances(Source, [{From, To, Weight}, ...])`, returning reachable
-`{Vertex, Distance}` pairs. Vertex identifiers and weights are nonnegative
-arbitrary-precision integers; malformed or negative inputs raise `badarg`.
-
-[dijkstra_total_correct](Erlean/Examples/Dijkstra.lean) proves total correctness
-of the actual imported OTP 29.0.6 Core implementation for **every finite graph**
-in that input domain. Each returned distance is attained and minimal among all
-finite walks; every omitted vertex is unreachable. The proof includes zero-weight
-cycles, parallel edges, and disconnected components without a graph-size bound.
-It does not require a successful execution or checked certificate as a premise.
-The source/compiler/import trust boundary remains as documented in the design.
-
-```erlang
-dijkstra:distances(0, [{0,1,9}, {0,2,2}, {2,1,3}]).
-%% [{0,0},{2,2},{1,5}]
-```
-
-Run `node tools/check_dijkstra.mjs` after building for reproducible extraction,
-17 graph checks against OTP and independent BigInt Bellman-Ford, and 11 invalid
-input checks. These tests supplement the universal proof; they are not its basis.
-
 ## Usage tutorial
 
 Run all commands below from the repository root in a POSIX shell.
@@ -120,57 +95,40 @@ for a term does not imply executable support.
 An exhausted budget is inconclusive, not proof of divergence. Read the outcome:
 a modeled Erlang exception is distinct from an unsupported semantic operation.
 
-### 3. Run Dijkstra and use its universal theorem
+### 3. Use a function contract in Lean
 
-This runs the three-edge example above inside the Lean executable semantics:
+A contract states which inputs are allowed and what the function must return.
+For example, the imported identity function has a total-correctness theorem for
+every value in the modeled domain, not just the integer used above.
 
-```sh
-.lake/build/bin/erlean run tests/fixtures/erlang/dijkstra/core.json distances '[
-  {"tag":"integer","value":"0"},
-  {"tag":"list","items":[
-    {"tag":"tuple","items":[{"tag":"integer","value":"0"},{"tag":"integer","value":"1"},{"tag":"integer","value":"9"}]},
-    {"tag":"tuple","items":[{"tag":"integer","value":"0"},{"tag":"integer","value":"2"},{"tag":"integer","value":"2"}]},
-    {"tag":"tuple","items":[{"tag":"integer","value":"2"},{"tag":"integer","value":"1"},{"tag":"integer","value":"3"}]}
-  ],"tail":{"tag":"nil"}}
-]'
-```
-
-The returned list encodes `[{0,0},{2,2},{1,5}]`. This execution is only an example;
-the correctness theorem quantifies over every finite graph in the stated domain.
-To use the theorem in Lean, run `mkdir -p build/tutorial` and save the following
-as `build/tutorial/CheckDijkstra.lean`:
+Run `mkdir -p build/tutorial` and save this as
+`build/tutorial/CheckContract.lean`:
 
 ```lean
-import Erlean.Examples.Dijkstra
+import Erlean.Examples.Identity
 
-open Erlean Erlean.Examples
-open Erlean.Core Erlean.Semantics Erlean.Logic
-open DijkstraCertificate Dijkstra
+open Erlean.Core Erlean.Logic Erlean.Examples
 
-example (source : Nat) (graph : Graph) :
-    ∃ result,
-      Evaluates (stepLocal world)
-        (initialCall "dijkstra" "distances" [encodeNat source, encodeGraph graph])
-        (.returned [encodeQueue result]) ∧
-      DijkstraAlgorithm.ResultCorrect graph source result :=
-  dijkstra_terminates_correct source graph
+example :
+    TotalCorrect [importedModule] "identity" "identity"
+      (fun args => ∃ value, args = [value])
+      (fun args result => result = .returned args) :=
+  identity_totalCorrect
 
-#check dijkstra_total_correct
-#print axioms dijkstra_total_correct
+#print axioms identity_totalCorrect
 ```
 
 Check it with:
 
 ```sh
-lake env lean -j1 -M2048 build/tutorial/CheckDijkstra.lean
+lake env lean -j1 -M2048 build/tutorial/CheckContract.lean
 ```
 
-`Graph` is a list of directed edges with natural-number endpoints and weights.
-`ResultCorrect` states that each reported distance is attained and minimal, and
-an omitted vertex is unreachable. The example proves execution and correctness
-for arbitrary `source` and `graph`, not a fixed test graph. The axiom audit lists
-only standard Lean axioms (`propext`, `Classical.choice`, and `Quot.sound`), with
-no `sorryAx`. Negative weights are outside this theorem's domain.
+The precondition requires exactly one argument. The postcondition says that the
+returned values equal the arguments; total correctness also establishes
+termination in the modeled semantics. See
+[Identity.lean](Erlean/Examples/Identity.lean) for the underlying execution proof.
+The axiom audit lets you inspect the theorem's logical dependencies.
 
 ### 4. Import source and generate a Lean module literal
 
@@ -230,9 +188,16 @@ After building and installing all pinned source-language toolchains:
 node tools/check_all.mjs
 ```
 
-For just the Dijkstra extraction and differential checks, use
-`node tools/check_dijkstra.mjs`. Testing supplements the Lean proofs and does
-not establish compiler correctness or full OTP compatibility.
+Testing supplements the Lean proofs and does not establish compiler correctness
+or full OTP compatibility.
+
+## Further examples
+
+Explore [list reversal](Erlean/Examples/Reverse.lean),
+[cross-module contracts](Erlean/Examples/Modular.lean),
+[actor protocol safety](Erlean/Examples/Protocol.lean), and
+[Dijkstra shortest paths](Erlean/Examples/Dijkstra.lean).
+Each example states its own input domain and semantic assumptions.
 
 Implementation coverage and the next work items are tracked in the
 [design document](docs/design.md#implementation-tracker).
