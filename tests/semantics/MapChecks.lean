@@ -1,9 +1,25 @@
 import Erlean.Semantics.Machine
+import Erlean.Semantics.Maps
 import Erlean.Semantics.Observation
 import Erlean.Core.Equality
 import Erlean.Core.MapPatterns
+import Erlean.Logic.Step
 
 open Erlean.Core Erlean.Semantics
+
+-- A checked operation contract closes one collected call without unfolding
+-- the symbolic map implementation or the remaining execution.
+example (world : CodeWorld) (entries : FiniteMap.Entries Value) (key : MapKey)
+    (fallback : Value) (context : Context) (stack : List Frame)
+    (publicMap : (Value.map entries).isPublic = true)
+    (publicFallback : fallback.isPublic = true) :
+    stepLocal world
+      ⟨.ret [fallback], context,
+        .collect .call context [.atom "maps", .atom "get", key.toValue, .map entries] [] :: stack⟩ =
+      .next ⟨.ret [(FiniteMap.lookup key entries).getD fallback], context, stack⟩ := by
+  have get (machine : LocalState) :=
+    mapBuiltin_get_default machine key entries fallback publicMap publicFallback
+  erlean_step [get]
 
 private def context : LocalState := ⟨.ret [], ⟨"map_checks", []⟩, []⟩
 private def key : MapKey := .atom "key"

@@ -191,6 +191,11 @@ calculation with a caller continuation, import `Erlean.Logic.Frames` and use
 the boundary transition. It does not preserve arbitrary halts or change the linked
 code world. Helpers do not need new runtime exports for proof composition.
 
+Import `Erlean.Logic.Step` for `erlean_step [contracts]`, a tactic for one local
+transition equation. It uses checked equations and a finite rewrite list, not
+native evaluation. It rejects remaining execution-relation goals and does not
+choose fuel or unfold symbolic BIF implementations by default.
+
 ### 5. Linked modules and actor replay
 
 Supply each dependency explicitly for a linked call:

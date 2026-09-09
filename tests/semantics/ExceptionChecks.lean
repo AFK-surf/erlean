@@ -1,8 +1,16 @@
 import Erlean.Import.Lower
 import Erlean.Semantics.Machine
 import Erlean.Logic.Frames
+import Erlean.Logic.Step
 
 open Erlean.Core Erlean.Import Erlean.Semantics
+
+-- Single-step automation must not consume a remaining segment goal.
+example (world : CodeWorld) (state boundary : LocalState)
+    (known : Erlean.Logic.ReachesBoundary (stepLocal world) state boundary) :
+    Erlean.Logic.ReachesBoundary (stepLocal world) state boundary := by
+  fail_if_success erlean_step
+  exact known
 
 -- Prefix lifting stops before an outer continuation can consume a return.
 example (context : Context) (value : Value) (suffix : List Frame) :

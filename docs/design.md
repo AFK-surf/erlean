@@ -173,6 +173,19 @@ All 112 map, 39 float, 91 sequential, 17 actor, and 28 graph/input checks passed
 Next work extends reusable execution composition as concrete proof clients need it.
 Build logic and the supported runtime operation profile remain unchanged.
 
+Validated proof-automation checkpoint: `Erlean.Logic.Step` provides the guarded
+`erlean_step [contracts]` tactic. It accepts checked client equations and rejects
+execution-relation goals before unfolding the local machine. It does not select
+fuel, iterate execution, introduce axioms, or unfold symbolic BIF bodies by default.
+This is proof-script reuse, not a new runtime interface. Compiler checks cover
+next and halt equations, variable-pattern selection, supplied equations, and
+rejection of runner and segment goals. A symbolic collected map call reuses an
+open-input operation contract without unfolding the map implementation.
+Serial compilation passed with a 525.4 MiB peak. The full regression suite and
+axiom audit passed with a 165.1 MiB peak and no swap. All existing compatibility
+and artifact checks remain unchanged. Next work validates client composition
+with this single-step tool. Keep builds serial and within the task memory budget.
+
 ### Previous work: reusable controller verification support (2026-09-09)
 
 The current cleanup moves all-trace exactness into `Controller.Trace.exact`.

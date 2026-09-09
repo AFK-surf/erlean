@@ -13,6 +13,7 @@ import Erlean.Semantics.Preservation
 import Erlean.Semantics.VariableSafety
 import Erlean.Logic.Segment
 import Erlean.Logic.Frames
+import Erlean.Logic.Step
 import Erlean.Core.MapPatterns
 import Erlean.Semantics.Observation
 import Erlean.Logic.ObservableContract
