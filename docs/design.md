@@ -20,7 +20,23 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current checkpoint: universal imported Dijkstra correctness (2026-09-09)
+### Current checkpoint: executable usage tutorial (2026-09-09)
+
+The README now provides an English walkthrough of dependency setup, retained
+artifact execution, universal Dijkstra theorem reuse, fresh OTP import and Lean
+literal emission, linked calls, actor recording/replay, and validation. It
+distinguishes the minimal Lean/Node setup from source-language dependencies and
+keeps the existing semantic and compiler trust boundaries explicit.
+
+Documentation checks passed: all tutorial execution commands, a fresh OTP 29.0.6
+identity export, generated literal kernel checking, the arbitrary-graph Lean
+proof snippet and axiom audit, linked execution, actor recording/replay, local
+Markdown link targets, and `git diff --check`. Lean checks ran serially with one
+worker and a 2 GiB cap. Dependency installation was not repeated, and the full
+compatibility suite was not rerun for this documentation-only change; its most
+recent full result remains the universal Dijkstra checkpoint below. No semantics
+or proof claims changed. Next implementation work remains the explicitly scoped
+extensions in "Next work beyond the initial milestones".
 
 | Milestone | Status | Evidence / remaining work |
 | --- | --- | --- |
@@ -306,7 +322,7 @@ serialized through the primary agent.
   checks, model/helper axiom audit, and 17 graph plus 11 invalid-input differential
   checks passed; pushed. The final universal Core entry contract was still pending
   at that checkpoint.
-- Current checkpoint: arbitrary-input Core edge expansion and source validation,
+- `0b48115`: arbitrary-input Core edge expansion and source validation,
   search-loop refinement, and the universal `dijkstra_total_correct` contract.
   All proof modules passed kernel checking without increasing the 2 GiB memory
   cap. The complete suite passed: 91 existing sequential differential cases,
@@ -314,7 +330,10 @@ serialized through the primary agent.
   rejection checks, recording/replay, and source/artifact correspondence.
   The final implementation theorem depends only on `propext`, `Classical.choice`,
   and `Quot.sound`; there are no custom axioms, `sorryAx`, or native execution
-  oracles. The carrying commit records this validated checkpoint.
+  oracles; pushed to `origin/main`.
+- Current checkpoint: English README usage tutorial with executed CLI examples,
+  fresh import/emission, and a kernel-checked arbitrary-graph proof snippet.
+  The carrying commit records the documentation-only checks described above.
 
 ## 1. Purpose and success criteria
 
