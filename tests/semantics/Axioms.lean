@@ -1,6 +1,8 @@
 import Erlean.Examples.Identity
 import Erlean.Examples.LanguageIdentity
+import Erlean.Examples.Reverse
 
 #print axioms Erlean.Examples.identity_totalCorrect
 #print axioms Erlean.Examples.gleam_identity_totalCorrect
 #print axioms Erlean.Examples.elixir_identity_totalCorrect
+#print axioms Erlean.Examples.reverse_totalCorrect

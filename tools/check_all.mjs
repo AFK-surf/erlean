@@ -57,5 +57,8 @@ for (const [language, declaration, file] of [
     ['emit', `tests/fixtures/${language}/identity/core.json`, declaration], true);
   assert.equal(output, readFileSync(`Erlean/Examples/${file}.lean`, 'utf8'));
 }
+const sequential = run('recursive proof artifact correspondence', '.lake/build/bin/erlean',
+  ['emit', 'tests/fixtures/erlang/sequential/core.json', 'importedSequentialModule'], true);
+assert.equal(sequential, readFileSync('Erlean/Examples/ImportedSequential.lean', 'utf8'));
 console.log('All bounded checks passed, including kernel-checked identity contract and artifact provenance.');
 console.log('Differential results are compatibility evidence, not a proof of equivalence with OTP.');

@@ -20,12 +20,12 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current checkpoint: three-language verification slice (2026-09-09)
+### Current checkpoint: imported recursive reversal verified (2026-09-09)
 
 | Milestone | Status | Evidence / remaining work |
 | --- | --- | --- |
 | M0: reproducible input | Complete for the fixture profile | Reproducible real imports from all three languages, manifests, inventories, and rejection diagnostics pass. |
-| M1: sequential verification | In progress | Three imported universal identity contracts and 40 differential cases pass; recursive contracts, closures, handlers, and preservation remain open. |
+| M1: sequential verification | In progress | Imported reversal proved for arbitrary lists, plus three identity contracts; closures, higher-order map, handlers, codec, and preservation remain open. |
 | M2: modular proofs | Not started | Depends on linked execution and function contracts. |
 | M3: actor verification | Not started | Depends on sequential and runtime request interfaces. |
 
@@ -78,6 +78,13 @@ serialized through the primary agent.
 - `node tools/check_all.mjs` passes the full bounded suite after OOM recovery.
   `node tools/build.mjs` compiles modules and native objects in dependency order;
   the final library, executable, and all example proofs build successfully.
+- `reverse_totalCorrect` proves termination and reversal for every finite list of
+  modeled values against the retained OTP sequential artifact. The proof composes
+  a 20-step entry prefix, 22-step recursive worker prefixes, and a 12-step base
+  case using list induction. It does not assume a fixed total execution budget.
+- `Erlean.Logic.Rules` exposes finite-prefix execution composition for reuse in
+  recursive and modular proofs. The suite checks the exact emitted recursive
+  proof artifact and audits the theorem's standard Lean axioms.
 - `lake env lean --run tests/import/Smoke.lean` passes malformed-input, precision,
   lexical scope, unsupported-feature, and real OTP fixture checks.
 - `node tools/check_export.mjs` checks reproducible extraction, hashes, operation
@@ -111,10 +118,11 @@ serialized through the primary agent.
 
 ### Next work
 
-1. Prove a recursive list-function contract against imported Core, beginning with
-   accumulator-based reversal; provide reusable frame and call proof rules.
-2. Strengthen accepted-Core invariants and prove local state preservation.
-3. Add captured closures and `letrec`, then a higher-order map contract.
+1. Add captured closures and `letrec`, then a higher-order map contract. OTP fixture
+   inspection confirms lexical tuple function names must resolve before module refs.
+2. Strengthen accepted-Core invariants and prove local state preservation; develop
+   environment coverage lemmas alongside closure integration.
+3. Generalize frame and call proof rules for dependency-contract reuse.
 4. Extend exception handlers and the codec-required map/bitstring operations.
 5. Progress to M2 dependency-contract reuse before starting M3 actor semantics.
 
@@ -124,9 +132,10 @@ serialized through the primary agent.
   to `origin/main`.
 - `78c590a`: three source exporters, OTP import, first local machine, CLI,
   generic runner proofs, and the imported Erlang identity contract; pushed.
-- Current checkpoint: three-language contracts, 40 differential cases, canonical
-  bitstring literals, alias patterns, and resource-bounded serial verification.
-  The commit carrying this tracker update records the exact revision.
+- `64a7760`: three-language contracts, 40 differential cases, canonical bitstring
+  literals, alias patterns, and resource-bounded serial verification; pushed.
+- Current checkpoint: imported arbitrary-list reversal and reusable finite-prefix
+  composition rules. Full bounded suite passes; the carrying commit records its revision.
 
 ## 1. Purpose and success criteria
 
