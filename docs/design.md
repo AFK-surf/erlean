@@ -68,6 +68,12 @@ or global-liveness proof is claimed. The library's
 hosted full suite also passed at this pin:
 [run 34349033714](https://github.com/AFK-surf/erlean/actions/runs/34349033714).
 
+Cue's round and dependency trace-existence proofs now call
+`Controller.trace_of_refinement` instead of repeating the finite-trace induction.
+They retain their separate all-execution exactness and safety theorems. The full
+Cue proof gate passed again with the existing equality helpers and batch runner.
+No production source, artifact, theorem statement, or dependency pin changed.
+
 ### Previous checkpoint: GitHub Actions verification (2026-09-09)
 
 GitHub Actions now runs a single Ubuntu 24.04 job on pull requests, pushes to
