@@ -1,5 +1,5 @@
 import Erlean.Runtime.Actors
-import Erlean.Examples.ImportedActorProtocol
+import Erlean.Examples.Protocol.Imported
 
 /-!
 Kernel-checked building blocks over the executable actor model: replay

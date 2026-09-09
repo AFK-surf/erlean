@@ -1,5 +1,5 @@
-import Erlean.Examples.ProtocolClientRuntime
-import Erlean.Examples.ProtocolServerRuntime
+import Erlean.Examples.Protocol.ClientRuntime
+import Erlean.Examples.Protocol.ServerRuntime
 
 namespace Erlean.Examples.ProtocolInvariant
 

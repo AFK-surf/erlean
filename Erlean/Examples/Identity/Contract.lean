@@ -1,4 +1,4 @@
-import Erlean.Examples.ImportedIdentity
+import Erlean.Examples.Identity.ImportedErlang
 import Erlean.Logic.Contract
 
 namespace Erlean.Examples

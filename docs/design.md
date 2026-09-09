@@ -20,7 +20,22 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current checkpoint: generic usage tutorial (2026-09-09)
+### Current checkpoint: topic-based example layout (2026-09-09)
+
+Example sources now live in topic directories: `Identity`, `Sequential`,
+`HigherOrder`, `Modular`, `ByteCodec`, `Protocol`, and `Dijkstra`. Each directory
+keeps its imported artifact literals with its contracts and supporting proofs;
+filenames describe their role without repeating the directory name. Lean imports,
+artifact-correspondence checks, and README links follow the new paths. Public
+declaration namespaces and generated literal contents remain unchanged, so this
+is a module-path reorganization, not a semantics or theorem API change. The
+dependency-ordered build and complete compatibility suite passed, including all
+kernel axiom audits, 91 sequential cases, 17 actor scenarios, and 17 graph plus
+11 invalid-input checks. All 31 moved files preserve content outside imports.
+Source-import existence and README link checks also passed, independently of
+cached build artifacts; the updated README contract snippet kernel-checks.
+
+The previous documentation checkpoint is recorded below for context.
 
 The README now provides an English walkthrough of dependency setup, retained
 artifact execution, identity function contract reuse, fresh OTP import and Lean
@@ -340,10 +355,13 @@ serialized through the primary agent.
 - `afd188b`: English README usage tutorial with executed CLI examples,
   fresh import/emission, and a kernel-checked arbitrary-graph proof snippet.
   Pushed to `origin/main`.
-- Current checkpoint: generic README workflow using an identity contract, with
+- `81e77c3`: generic README workflow using an identity contract, with
   specialized examples reduced to links. The replacement proof snippet, axiom
   audit, local links, and whitespace checks passed; no full-suite rerun was
-  needed for this documentation-only revision.
+  needed for this documentation-only revision; pushed to `origin/main`.
+- Current checkpoint: move 31 example modules into topic directories and update
+  all source imports, artifact check paths, and documentation. Preserve theorem
+  declaration names and generated artifact contents.
 
 ## 1. Purpose and success criteria
 
@@ -756,7 +774,14 @@ Erlean/
   Runtime/        -- BIFs, runtime operations, actor system, profiles
   Logic/          -- Reachability, contracts, invariants, proof rules
   Tactic/         -- Symbolic execution and contract application
-  Examples/       -- Verified imported modules
+  Examples/       -- Verified imported modules, grouped by topic
+    Identity/     -- Erlang, Elixir, and Gleam identity contracts
+    Sequential/   -- Recursive list-processing examples
+    HigherOrder/  -- Higher-order function contracts
+    Modular/      -- Cross-module contract reuse
+    ByteCodec/    -- Byte codec and observable contracts
+    Protocol/     -- Actor protocol execution and safety proofs
+    Dijkstra/     -- Graph model, refinement, and correctness
 tools/            -- OTP and source-language extraction adapters
 tests/            -- Compatibility fixtures and differential harness
 docs/             -- Design and supported-profile documentation
@@ -764,6 +789,13 @@ docs/             -- Design and supported-profile documentation
 
 Keep IO and tool invocation outside the semantic definitions. Executable drivers
 may use Lean IO; the transition functions and proof interfaces remain pure.
+
+The example topic directories above are implemented. Keep generated `Imported`
+modules beside the proofs that use them; name handwritten modules by role, such
+as `Contract`, `Model`, or `Correctness`. The identity imports distinguish their
+source languages. Add new examples in a topic directory, not directly under
+`Erlean/Examples/`. Module paths follow the layout; existing declaration names
+remain stable independently of these paths.
 
 All repository content, including comments, documentation, and test descriptions,
 is written in English regardless of the language used in project discussions.

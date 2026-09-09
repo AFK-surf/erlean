@@ -1,5 +1,5 @@
-import Erlean.Examples.ImportedHigherOrder
-import Erlean.Examples.Reverse
+import Erlean.Examples.HigherOrder.Imported
+import Erlean.Examples.Sequential.Reverse
 
 namespace Erlean.Examples
 

@@ -1,4 +1,4 @@
-import Erlean.Examples.DijkstraExpand
+import Erlean.Examples.Dijkstra.Expand
 
 namespace Erlean.Examples.Dijkstra
 

@@ -1,4 +1,4 @@
-import Erlean.Examples.ImportedSequential
+import Erlean.Examples.Sequential.Imported
 import Erlean.Logic.Rules
 
 namespace Erlean.Examples

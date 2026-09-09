@@ -1,4 +1,4 @@
-import Erlean.Examples.ProtocolRuntimeBase
+import Erlean.Examples.Protocol.RuntimeBase
 
 set_option maxRecDepth 2048
 set_option maxHeartbeats 800000

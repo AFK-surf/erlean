@@ -1,4 +1,4 @@
-import Erlean.Examples.DijkstraHelpers
+import Erlean.Examples.Dijkstra.Helpers
 
 namespace Erlean.Examples.Dijkstra
 

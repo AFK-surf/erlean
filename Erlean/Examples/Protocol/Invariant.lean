@@ -1,5 +1,5 @@
-import Erlean.Examples.Protocol
-import Erlean.Examples.ProtocolPhases
+import Erlean.Examples.Protocol.Basic
+import Erlean.Examples.Protocol.Phases
 import Erlean.Logic.Segment
 
 /-!

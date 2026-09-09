@@ -1,4 +1,4 @@
-import Erlean.Examples.DijkstraCertificate
+import Erlean.Examples.Dijkstra.Certificate
 
 namespace Erlean.Examples.DijkstraAlgorithm
 

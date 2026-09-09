@@ -105,7 +105,7 @@ Run `mkdir -p build/tutorial` and save this as
 `build/tutorial/CheckContract.lean`:
 
 ```lean
-import Erlean.Examples.Identity
+import Erlean.Examples.Identity.Contract
 
 open Erlean.Core Erlean.Logic Erlean.Examples
 
@@ -127,7 +127,8 @@ lake env lean -j1 -M2048 build/tutorial/CheckContract.lean
 The precondition requires exactly one argument. The postcondition says that the
 returned values equal the arguments; total correctness also establishes
 termination in the modeled semantics. See
-[Identity.lean](Erlean/Examples/Identity.lean) for the underlying execution proof.
+[the identity contract](Erlean/Examples/Identity/Contract.lean) for the underlying
+execution proof.
 The axiom audit lets you inspect the theorem's logical dependencies.
 
 ### 4. Import source and generate a Lean module literal
@@ -153,7 +154,7 @@ additional provenance beyond this fixture profile.
 `emit` creates an auditable syntax literal, not a correctness proof. Proving your
 own module requires an explicit input contract, postcondition, and proof about
 that literal in the implemented semantics. Start with
-[Identity.lean](Erlean/Examples/Identity.lean) and
+[the identity contract](Erlean/Examples/Identity/Contract.lean) and
 [the existing example proofs](Erlean/Examples). The source compiler and importer
 remain outside the verified trust boundary. The
 [import notes](docs/otp29-import.md) also describe the Elixir and Gleam adapters.
@@ -193,10 +194,10 @@ or full OTP compatibility.
 
 ## Further examples
 
-Explore [list reversal](Erlean/Examples/Reverse.lean),
-[cross-module contracts](Erlean/Examples/Modular.lean),
-[actor protocol safety](Erlean/Examples/Protocol.lean), and
-[Dijkstra shortest paths](Erlean/Examples/Dijkstra.lean).
+Explore [list reversal](Erlean/Examples/Sequential/Reverse.lean),
+[cross-module contracts](Erlean/Examples/Modular/Contract.lean),
+[actor protocol safety](Erlean/Examples/Protocol/Safety.lean), and
+[Dijkstra shortest paths](Erlean/Examples/Dijkstra/Correctness.lean).
 Each example states its own input domain and semantic assumptions.
 
 Implementation coverage and the next work items are tracked in the

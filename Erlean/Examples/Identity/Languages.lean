@@ -1,5 +1,5 @@
-import Erlean.Examples.ImportedGleamIdentity
-import Erlean.Examples.ImportedElixirIdentity
+import Erlean.Examples.Identity.ImportedGleam
+import Erlean.Examples.Identity.ImportedElixir
 import Erlean.Logic.Contract
 
 namespace Erlean.Examples

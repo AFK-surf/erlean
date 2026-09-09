@@ -41,7 +41,7 @@ if (!flags.has('--skip-export')) {
   }
 }
 assert.equal(run(executable, ['emit', artifact, 'importedDijkstraModule']),
-  readFileSync('Erlean/Examples/ImportedDijkstra.lean', 'utf8'),
+  readFileSync('Erlean/Examples/Dijkstra/Imported.lean', 'utf8'),
   'Dijkstra proofs must use the exact AST emitted from the retained artifact');
 
 const integer = value => ({ tag: 'integer', value: String(value) });

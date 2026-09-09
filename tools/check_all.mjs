@@ -59,11 +59,11 @@ const emitted = spawnSync('.lake/build/bin/erlean',
 if (emitted.error) throw emitted.error;
 assert.equal(emitted.status, 0, emitted.stderr);
 assert.equal(emitted.stdout.trimEnd(),
-  readFileSync('Erlean/Examples/ImportedIdentity.lean', 'utf8').trimEnd(),
+  readFileSync('Erlean/Examples/Identity/ImportedErlang.lean', 'utf8').trimEnd(),
   'The checked-in Lean module must match the current importer and pinned Core artifact');
 for (const [language, declaration, file] of [
-  ['elixir', 'importedElixirModule', 'ImportedElixirIdentity'],
-  ['gleam', 'importedGleamModule', 'ImportedGleamIdentity'],
+  ['elixir', 'importedElixirModule', 'Identity/ImportedElixir'],
+  ['gleam', 'importedGleamModule', 'Identity/ImportedGleam'],
 ]) {
   const output = run(`${language} proof artifact correspondence`, '.lake/build/bin/erlean',
     ['emit', `tests/fixtures/${language}/identity/core.json`, declaration], true);
@@ -71,18 +71,18 @@ for (const [language, declaration, file] of [
 }
 const sequential = run('recursive proof artifact correspondence', '.lake/build/bin/erlean',
   ['emit', 'tests/fixtures/erlang/sequential/core.json', 'importedSequentialModule'], true);
-assert.equal(sequential, readFileSync('Erlean/Examples/ImportedSequential.lean', 'utf8'));
+assert.equal(sequential, readFileSync('Erlean/Examples/Sequential/Imported.lean', 'utf8'));
 const higherOrder = run('higher-order proof artifact correspondence', '.lake/build/bin/erlean',
   ['emit', 'tests/fixtures/erlang/higher_order/core.json', 'importedHigherOrderModule'], true);
-assert.equal(higherOrder, readFileSync('Erlean/Examples/ImportedHigherOrder.lean', 'utf8'));
+assert.equal(higherOrder, readFileSync('Erlean/Examples/HigherOrder/Imported.lean', 'utf8'));
 const modular = run('modular proof artifact correspondence', '.lake/build/bin/erlean',
   ['emit', 'tests/fixtures/erlang/modular_client/core.json', 'importedModularClient'], true);
-assert.equal(modular, readFileSync('Erlean/Examples/ImportedModularClient.lean', 'utf8'));
+assert.equal(modular, readFileSync('Erlean/Examples/Modular/Imported.lean', 'utf8'));
 const codec = run('codec proof artifact correspondence', '.lake/build/bin/erlean',
   ['emit', 'tests/fixtures/erlang/byte_codec/core.json', 'importedByteCodec'], true);
-assert.equal(codec, readFileSync('Erlean/Examples/ImportedByteCodec.lean', 'utf8'));
+assert.equal(codec, readFileSync('Erlean/Examples/ByteCodec/Imported.lean', 'utf8'));
 const actor = run('actor proof artifact correspondence', '.lake/build/bin/erlean',
   ['emit', 'tests/fixtures/erlang/actor_protocol/core.json', 'importedActorProtocolModule'], true);
-assert.equal(actor, readFileSync('Erlean/Examples/ImportedActorProtocol.lean', 'utf8'));
+assert.equal(actor, readFileSync('Erlean/Examples/Protocol/Imported.lean', 'utf8'));
 console.log('All bounded checks passed, including kernel-checked identity contract and artifact provenance.');
 console.log('Differential results are compatibility evidence, not a proof of equivalence with OTP.');

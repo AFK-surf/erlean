@@ -1,4 +1,4 @@
-import Erlean.Examples.DijkstraModel
+import Erlean.Examples.Dijkstra.Model
 
 namespace Erlean.Examples.DijkstraAlgorithm
 

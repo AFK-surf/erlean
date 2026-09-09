@@ -1,5 +1,5 @@
-import Erlean.Examples.DijkstraExecutionBase
-import Erlean.Examples.DijkstraModel
+import Erlean.Examples.Dijkstra.ExecutionBase
+import Erlean.Examples.Dijkstra.Model
 
 namespace Erlean.Examples.Dijkstra
 

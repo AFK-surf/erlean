@@ -1,4 +1,4 @@
-import Erlean.Examples.ProtocolInvariant
+import Erlean.Examples.Protocol.Invariant
 
 namespace Erlean.Examples.ProtocolInvariant
 

@@ -1,5 +1,5 @@
-import Erlean.Examples.DijkstraSearch
-import Erlean.Examples.DijkstraAlgorithm
+import Erlean.Examples.Dijkstra.Search
+import Erlean.Examples.Dijkstra.Algorithm
 
 /-!
 Universal total correctness for the retained OTP Core implementation of Dijkstra.

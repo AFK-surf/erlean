@@ -1,4 +1,4 @@
-import Erlean.Examples.ImportedByteCodec
+import Erlean.Examples.ByteCodec.Imported
 import Erlean.Logic.ObservableContract
 
 namespace Erlean.Examples

@@ -1,6 +1,6 @@
-import Erlean.Examples.ImportedDijkstra
-import Erlean.Examples.DijkstraCertificate
-import Erlean.Examples.Reverse
+import Erlean.Examples.Dijkstra.Imported
+import Erlean.Examples.Dijkstra.Certificate
+import Erlean.Examples.Sequential.Reverse
 
 namespace Erlean.Examples.Dijkstra
 

@@ -20,7 +20,7 @@ function run(command, args) {
 
 const emitted = run(executable, ['emit', 'tests/fixtures/erlang/identity/core.json']);
 assert.equal(emitted.status, 0, emitted.stderr);
-assert.equal(emitted.stdout, readFileSync('Erlean/Examples/ImportedIdentity.lean', 'utf8'),
+assert.equal(emitted.stdout, readFileSync('Erlean/Examples/Identity/ImportedErlang.lean', 'utf8'),
   'Proof fixture must be the exact AST emitted from the retained OTP artifact');
 
 const cases = [

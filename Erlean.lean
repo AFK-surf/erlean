@@ -9,18 +9,18 @@ import Erlean.Semantics.VariableSafety
 import Erlean.Logic.Segment
 import Erlean.Semantics.Observation
 import Erlean.Logic.ObservableContract
-import Erlean.Examples.Identity
-import Erlean.Examples.LanguageIdentity
-import Erlean.Examples.Reverse
-import Erlean.Examples.HigherOrder
-import Erlean.Examples.Modular
-import Erlean.Examples.ByteCodec
-import Erlean.Examples.Protocol
+import Erlean.Examples.Identity.Contract
+import Erlean.Examples.Identity.Languages
+import Erlean.Examples.Sequential.Reverse
+import Erlean.Examples.HigherOrder.Contract
+import Erlean.Examples.Modular.Contract
+import Erlean.Examples.ByteCodec.Contract
+import Erlean.Examples.Protocol.Basic
 import Erlean.Runtime.Invariants
 import Erlean.Runtime.SignalBounds
-import Erlean.Examples.ProtocolPhases
-import Erlean.Examples.ProtocolSafety
-import Erlean.Examples.Dijkstra
+import Erlean.Examples.Protocol.Phases
+import Erlean.Examples.Protocol.Safety
+import Erlean.Examples.Dijkstra.Correctness
 
 /-!
 # erlean

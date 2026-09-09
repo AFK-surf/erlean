@@ -1,5 +1,5 @@
-import Erlean.Examples.ImportedIdentity
-import Erlean.Examples.ImportedModularClient
+import Erlean.Examples.Identity.ImportedErlang
+import Erlean.Examples.Modular.Imported
 import Erlean.Logic.Modular
 
 namespace Erlean.Examples

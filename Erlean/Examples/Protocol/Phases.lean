@@ -1,4 +1,4 @@
-import Erlean.Examples.Protocol
+import Erlean.Examples.Protocol.Basic
 import Erlean.Logic.Segment
 
 /-!
