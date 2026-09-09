@@ -52,8 +52,16 @@ runner optimization, not a semantic extension. The full serialized suite passed,
 including batch ordering, raised outcomes, malformed input, late model faults,
 and per-case exhaustion with atomic output. The original single-call CLI checks
 and all artifact, differential, and theorem checks still pass. Cue's Round,
-Dependency, Ownership, and Policy modules have passed kernel checking. Next, pin
-this runner checkpoint there and complete its production integration gate.
+Dependency, Ownership, and Policy modules have passed kernel checking.
+
+Cue now pins `d1ee8a67c22d2aecc5ff4ec2d8f3408eb6c166a8` through a real public
+Git dependency. Its complete proof gate passed, including two exact OTP 29.0.2
+exports, emitted-syntax correspondence, 241 batch differential cases, and an
+allowlisted final axiom audit. Its full Agent Loop application suite passed
+1763 tests with 2 existing skips and 42 excluded live-LLM cases. Retained TLC
+validation and the integration pull request remain pending. The library's
+hosted full suite also passed at this pin:
+[run 34349033714](https://github.com/AFK-surf/erlean/actions/runs/34349033714).
 
 ### Previous checkpoint: GitHub Actions verification (2026-09-09)
 
