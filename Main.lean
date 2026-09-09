@@ -1,5 +1,6 @@
 import Erlean
 import Erlean.Runtime.Scheduler
+import Erlean.Import.Emit
 
 open Lean Erlean.Core Erlean.Import Erlean.Semantics
 
@@ -212,14 +213,7 @@ private def emit (path : String) (declaration : String := "importedModule") : IO
     throw (IO.userError "Declaration name must contain only letters and underscores")
   let report ← load path
   complete report
-  IO.println "import Erlean.Core.Syntax"
-  IO.println ""
-  IO.println "namespace Erlean.Examples"
-  IO.println ""
-  IO.println "/-- Generated from a pinned OTP Core artifact by the erlean importer. -/"
-  IO.println s!"def {declaration} : Erlean.Core.Module :=\n{reprStr report.module}"
-  IO.println ""
-  IO.println "end Erlean.Examples"
+  IO.print (Erlean.Import.Emit.moduleSource report.module declaration)
 
 def main (args : List String) : IO UInt32 := do
   try

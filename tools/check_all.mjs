@@ -2,7 +2,9 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, writeFileSync, unlinkSync, rmdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 function run(label, command, args, quiet = false) {
   console.log(`Checking ${label}...`);
@@ -35,6 +37,19 @@ const fixtures = [
 process.env.ERL_FLAGS = `${process.env.ERL_FLAGS ?? ''} +S 2:2 +SDcpu 1 +SDio 1`.trim();
 run('serialized Lean build and imported contracts', 'node', ['tools/build.mjs']);
 run('Lean importer rejection and scope checks', 'lake', ['env', 'lean', '-j1', '-M2048', '--run', 'tests/import/Smoke.lean']);
+const emissionDirectory = mkdtempSync(join(tmpdir(), 'erlean-emission-'));
+const emissionFile = join(emissionDirectory, 'Stress.lean');
+try {
+  const args = ['env', 'lean', '-j1', '-M2048', '--run', 'tests/import/Emit.lean'];
+  const source = run('large AST source emission', 'lake', args, true);
+  assert.equal(source, run('deterministic source emission', 'lake', args, true));
+  assert.ok(!source.includes('set_option maxRecDepth'), 'Emission must use the default recursion limit');
+  writeFileSync(emissionFile, source);
+  run('kernel-checked emitted AST equality', 'lake', ['env', 'lean', '-j1', '-M2048', emissionFile]);
+} finally {
+  try { unlinkSync(emissionFile); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  rmdirSync(emissionDirectory);
+}
 run('OTP extraction and lossless transport', 'node', ['tools/check_export.mjs']);
 // This also regenerates the ignored Elixir BEAM before validating its manifest hash.
 run('Elixir/Gleam compiler adapters and reproducibility', 'node', ['tools/check_languages.mjs']);

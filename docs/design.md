@@ -20,7 +20,39 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current work: finite maps and payload transport
+### Current work: scalable imported-source emission
+
+Split generated module literals into private transparent declarations to keep
+elaboration local to each code body. Preserve the public module declaration,
+function order, closure indices, captures, exports, and the exact imported AST.
+This changes source layout only. It adds no execution semantics or source
+translation proof. Validate generated source under the default Lean recursion
+limit and existing memory limits, including a large synthetic module and all
+retained proof clients. Regenerate retained literals from their pinned artifacts.
+Do not increase build concurrency, memory limits, or global elaboration limits.
+
+Status: expression and table chunking is implemented. A large imported module
+compiled at the default recursion limit in 5.0 seconds with a 309.2 MiB peak and
+no swap. Ordinary private definitions preserve definitional equality without
+eager abbreviation expansion during assembly. After the module is checked, mark
+the chunks reducible so existing projection-based proof automation keeps working.
+All retained proof clients recompiled in 3 minutes 20 seconds with a 586.1 MiB
+peak and no swap. The deterministic stress test passed at default recursion
+limits. It checks whole-AST equality with `rfl`, not native evaluation, for 98
+functions, two closures, and a large nested expression that exercises every
+child-bearing constructor's split path. The full compatibility suite passed in
+2 minutes 21 seconds with a 282.6 MiB peak and no swap. This includes the axiom
+audit, 91 sequential cases, 112 map cases, 39 float cases, 17 actor scenarios,
+28 graph/input cases, batch boundaries, and exact generated-artifact checks.
+Raw Core and compiler provenance do not change. The generator checkpoint is
+complete. Further semantic work remains scoped by the profile below.
+
+Limits: literal values, patterns, and binder/capture metadata still use `reprStr`.
+An unusually large individual field can still reach elaboration limits. Repeated
+subtree printing can be costly for deeply nested expressions. This checkpoint
+does not claim constant-memory generation or support for arbitrary artifact size.
+
+### Finite maps and payload transport
 
 The next objective is reusable finite-map semantics and proof tools for pure
 state reducers. Add canonical data keys, map operations, import support, and
