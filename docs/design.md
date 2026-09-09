@@ -144,6 +144,19 @@ Subagents author key/map algebra and compatibility fixtures. The primary agent
 owns machine/importer integration and all serial builds and tests. Build scripts
 stay unchanged. The finite-map implementation and compatibility checks are complete.
 
+Current proof-tool follow-up: add open-input find, merge, and dynamic-key remove
+contracts. Add single-step runner rewrites that leave the remaining runner opaque.
+These are proofs about existing execution, not new runtime operations.
+The map and runner rules passed serial compilation. The build peaked at 611.7 MiB
+with no swap.
+An additional frame rule lifts actual next transitions through an appended stack
+suffix. Its prefix corollary stops before the boundary transition. It does not
+lift arbitrary halts or change the code world. The integrated frame build passed
+with a 520.4 MiB peak. The full serial regression suite and axiom audit passed,
+including return/catch boundary examples, 112 map cases, 39 finite-float cases,
+and all existing sequential, actor, and graph checks. The complete cached suite
+peaked at 175.3 MiB with no swap. New laws use only the existing standard kernel axioms.
+
 ### Previous work: reusable controller verification support (2026-09-09)
 
 The current cleanup moves all-trace exactness into `Controller.Trace.exact`.

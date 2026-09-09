@@ -46,6 +46,36 @@ theorem mapBuiltin_put_of_toMapKey (state : LocalState)
   simp [mapBuiltin, Value.publicList, publicMap, publicKey, publicValue,
     withMap_public state entries _ publicMap, withMapKey_of_toMapKey key mapKey _ supported]
 
+theorem mapBuiltin_remove_of_toMapKey (state : LocalState)
+    (key : Value) (mapKey : MapKey) (entries : FiniteMap.Entries Value)
+    (publicMap : (Value.map entries).isPublic = true)
+    (publicKey : key.isPublic = true) (supported : key.toMapKey = some mapKey) :
+    mapBuiltin state "remove" [key, .map entries] =
+      nextControl state (.ret [.map (FiniteMap.erase mapKey entries)]) := by
+  simp [mapBuiltin, Value.publicList, publicMap, publicKey,
+    withMap_public state entries _ publicMap, withMapKey_of_toMapKey key mapKey _ supported]
+
+theorem mapBuiltin_find_of_toMapKey (state : LocalState)
+    (key : Value) (mapKey : MapKey) (entries : FiniteMap.Entries Value)
+    (publicMap : (Value.map entries).isPublic = true)
+    (publicKey : key.isPublic = true) (supported : key.toMapKey = some mapKey) :
+    mapBuiltin state "find" [key, .map entries] =
+      match FiniteMap.lookup mapKey entries with
+      | some value => nextControl state (.ret [.tuple [.atom "ok", value]])
+      | none => nextControl state (.ret [.atom "error"]) := by
+  simp [mapBuiltin, Value.publicList, publicMap, publicKey,
+    withMap_public state entries _ publicMap,
+    withMapKey_of_toMapKey key mapKey _ supported] <;> rfl
+
+theorem mapBuiltin_merge (state : LocalState) (left right : FiniteMap.Entries Value)
+    (publicLeft : (Value.map left).isPublic = true)
+    (publicRight : (Value.map right).isPublic = true) :
+    mapBuiltin state "merge" [.map left, .map right] =
+      nextControl state (.ret [.map (right.foldl (fun entries pair =>
+        FiniteMap.insert pair.1 pair.2 entries) left)]) := by
+  simp [mapBuiltin, Value.publicList, publicLeft, publicRight,
+    withMap_public state left _ publicLeft, withMap_public state right _ publicRight]
+
 theorem mapBuiltin_get (state : LocalState) (key : MapKey)
     (entries : FiniteMap.Entries Value)
     (publicMap : (Value.map entries).isPublic = true) :
@@ -80,5 +110,15 @@ theorem mapBuiltin_remove (state : LocalState) (key : MapKey)
       nextControl state (.ret [.map (FiniteMap.erase key entries)]) := by
   simp [mapBuiltin, Value.publicList, publicMap, MapKey.toValue_public,
     withMap_public state entries _ publicMap, withMapKey_supported]
+
+theorem mapBuiltin_find (state : LocalState) (key : MapKey)
+    (entries : FiniteMap.Entries Value)
+    (publicMap : (Value.map entries).isPublic = true) :
+    mapBuiltin state "find" [key.toValue, .map entries] =
+      match FiniteMap.lookup key entries with
+      | some value => nextControl state (.ret [.tuple [.atom "ok", value]])
+      | none => nextControl state (.ret [.atom "error"]) :=
+  mapBuiltin_find_of_toMapKey state key.toValue key entries publicMap
+    (MapKey.toValue_public key) (MapKey.toValue_toMapKey key)
 
 end Erlean.Semantics

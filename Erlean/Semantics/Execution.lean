@@ -25,6 +25,16 @@ def run (step : State → Transition State Result) : Nat → State → RunResult
     | .next next => run step fuel next
     | .halt result => .halted result
 
+/-- Rewrite one proved step without unfolding the remaining runner. -/
+theorem run_next (transition : step state = Transition.next next) (fuel : Nat) :
+    run step (fuel + 1) state = run step fuel next := by
+  simp only [run, transition]
+
+/-- A proved halt needs one step, independent of the remaining budget. -/
+theorem run_halt (transition : step state = Transition.halt result) (fuel : Nat) :
+    run step (fuel + 1) state = .halted result := by
+  simp only [run, transition]
+
 def resume (step : State → Transition State Result) (fuel : Nat) :
     RunResult State Result → RunResult State Result
   | .exhausted state => run step fuel state

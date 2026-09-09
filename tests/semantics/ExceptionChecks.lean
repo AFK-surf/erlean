@@ -1,7 +1,28 @@
 import Erlean.Import.Lower
 import Erlean.Semantics.Machine
+import Erlean.Logic.Frames
 
 open Erlean.Core Erlean.Import Erlean.Semantics
+
+-- Prefix lifting stops before an outer continuation can consume a return.
+example (context : Context) (value : Value) (suffix : List Frame) :
+    Erlean.Logic.ReachesBoundary (stepLocal [])
+      (Erlean.Logic.appendStack ⟨.eval (.lit value), context, []⟩ suffix)
+      (Erlean.Logic.appendStack ⟨.ret [value], context, []⟩ suffix) :=
+  Erlean.Logic.reachesBoundary_appendStack [] _ _ suffix ⟨1, rfl⟩
+
+example (context : Context) (value : Value) (body : Expr) :
+    stepLocal [] (Erlean.Logic.appendStack ⟨.ret [value], context, []⟩
+      [.seq context body]) = .next ⟨.eval body, context, []⟩ := rfl
+
+-- An outer catch changes an uncaught throw into a return. Halts do not lift.
+example (context : Context) (reason : Value) :
+    stepLocal [] ⟨.raise ⟨.throw, reason⟩, context, []⟩ =
+      .halt (.raised ⟨.throw, reason⟩) := rfl
+
+example (context : Context) (reason : Value) :
+    stepLocal [] (Erlean.Logic.appendStack ⟨.raise ⟨.throw, reason⟩, context, []⟩
+      [.catchFrame context]) = .next ⟨.ret [reason], context, []⟩ := rfl
 
 -- These reduction checks establish only the stated representation properties.
 example (kind : String) : (Value.exceptionInfo kind).isPublic = false := by simp [Value.isPublic]

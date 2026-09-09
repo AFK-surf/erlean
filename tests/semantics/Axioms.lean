@@ -12,6 +12,7 @@ import Erlean.Semantics.VariableSafety
 import Erlean.Core.Maps
 import Erlean.Semantics.Maps
 import Erlean.Logic.Segment
+import Erlean.Logic.Frames
 import Erlean.Runtime.Invariants
 import Erlean.Runtime.SignalBounds
 import Erlean.Examples.Protocol.Phases
@@ -70,6 +71,14 @@ import Erlean.Examples.Dijkstra.Correctness
 #print axioms Erlean.Semantics.withMapKey_of_toMapKey
 #print axioms Erlean.Semantics.mapBuiltin_get_default_of_toMapKey
 #print axioms Erlean.Semantics.mapBuiltin_put_of_toMapKey
+#print axioms Erlean.Semantics.mapBuiltin_remove_of_toMapKey
+#print axioms Erlean.Semantics.mapBuiltin_find_of_toMapKey
+#print axioms Erlean.Semantics.mapBuiltin_find
+#print axioms Erlean.Semantics.mapBuiltin_merge
+#print axioms Erlean.Semantics.run_next
+#print axioms Erlean.Semantics.run_halt
+#print axioms Erlean.Logic.stepLocal_next_appendStack
+#print axioms Erlean.Logic.reachesBoundary_appendStack
 #print axioms Erlean.Semantics.mapBuiltin_remove
 #print axioms Erlean.Core.Value.public_of_exactComparable
 #print axioms Erlean.Core.FloatBits.parseHex_finite

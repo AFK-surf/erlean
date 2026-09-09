@@ -182,6 +182,13 @@ that literal in the implemented semantics. Start with
 remain outside the verified trust boundary. The
 [import notes](docs/otp29-import.md) also describe the Elixir and Gleam adapters.
 
+For reusable map-call contracts, import `Erlean.Semantics.Maps`. These rules keep
+canonical public-map and supported-key assumptions explicit. To compose a private
+calculation with a caller continuation, import `Erlean.Logic.Frames` and use
+`reachesBoundary_appendStack` on a checked execution prefix. The rule stops before
+the boundary transition. It does not preserve arbitrary halts or change the linked
+code world. Helpers do not need new runtime exports for proof composition.
+
 ### 5. Linked modules and actor replay
 
 Supply each dependency explicitly for a linked call:

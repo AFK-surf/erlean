@@ -12,6 +12,7 @@ import Erlean.Semantics.Maps
 import Erlean.Semantics.Preservation
 import Erlean.Semantics.VariableSafety
 import Erlean.Logic.Segment
+import Erlean.Logic.Frames
 import Erlean.Semantics.Observation
 import Erlean.Logic.ObservableContract
 import Erlean.Examples.Identity.Contract
