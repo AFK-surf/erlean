@@ -1,0 +1,4 @@
+/.lake/
+/.tools/
+/build/
+*.beam
