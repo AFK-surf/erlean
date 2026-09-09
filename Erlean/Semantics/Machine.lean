@@ -117,6 +117,37 @@ def invoke (world : CodeWorld) (state : LocalState) (moduleName name : String)
             control := .eval function.body
             context := ⟨moduleName, function.params.zip args⟩ }
 
+def makeClosureValue (world : CodeWorld) (context : Context) (index : Nat) : Except Fault Value := do
+  let some mod := world.find? (fun m => m.name == context.moduleName)
+    | throw (.invalid "Closure module is not linked")
+  let some defn := mod.closureCode[index]? | throw (.invalid "Closure code index is invalid")
+  let captured ← defn.outerScope.mapM fun id => do
+    let some value := context.env.lookup id | throw (.invalid "Closure capture is unbound")
+    pure (id, value)
+  return .closure context.moduleName index captured defn.recursiveBindings
+
+/-- Rebuild recursive bindings from finite descriptors, without cyclic values. -/
+def recursiveEnv (moduleName : String) (captured : Env) (group : List (VarId × Nat)) : Env :=
+  group.map fun (id, index) => (id, .closure moduleName index captured group)
+
+def applyClosure (world : CodeWorld) (state : LocalState) (moduleName : String)
+    (index : Nat) (captured : Env) (group : List (VarId × Nat)) (args : Values) :
+    Transition LocalState Outcome :=
+  match world.find? (fun m => m.name == moduleName) with
+  | none => unsupported s!"unlinked closure module {moduleName}"
+  | some mod =>
+    match mod.closureCode[index]? with
+    | none => invalid "Closure code index is invalid"
+    | some defn =>
+      if defn.recursiveBindings != group || captured.map Prod.fst != defn.outerScope then
+        invalid "Closure descriptor does not match its code"
+      else if defn.params.length != args.length then
+        raiseError state (.tuple [.atom "badarity", .tuple [
+          .closure moduleName index captured group, args.foldr Value.cons .nil]])
+      else .next { state with
+        control := .eval defn.body
+        context := ⟨moduleName, defn.params.zip args ++ recursiveEnv moduleName captured group ++ captured⟩ }
+
 def finishCollect (world : CodeWorld) (state : LocalState) (action : Collect)
     (values : Values) : Transition LocalState Outcome :=
   match action, values with
@@ -129,6 +160,7 @@ def finishCollect (world : CodeWorld) (state : LocalState) (action : Collect)
     if arity == args.length then invoke world state mod name args false
     else raiseError state (.tuple [.atom "badarity", .tuple [.function mod name arity,
       args.foldr Value.cons .nil]])
+  | .apply, .closure mod index captured group :: args => applyClosure world state mod index captured group args
   | .apply, value :: _ => raiseError state (.tuple [.atom "badfun", value])
   | .primop "match_fail", [.tuple (.atom "function_clause" :: _)] =>
     raiseError state (.atom "function_clause")
@@ -156,6 +188,17 @@ def stepLocal (world : CodeWorld) (state : LocalState) : Transition LocalState O
       | none => invalid s!"Unbound variable {id}"
     | .funRef name arity =>
       nextControl state (.ret [.function state.context.moduleName name arity])
+    | .makeClosure index =>
+      match makeClosureValue world state.context index with
+      | .ok value => nextControl state (.ret [value])
+      | .error fault => .halt (.fault fault)
+    | .letrec bindings body =>
+      match bindings.mapM (fun (id, index) =>
+        (makeClosureValue world state.context index).map (id, ·)) with
+      | .error fault => .halt (.fault fault)
+      | .ok env => .next { state with
+          control := .eval body
+          context := { state.context with env := env ++ state.context.env } }
     | .values elements => startCollect world state .values elements
     | .tuple elements => startCollect world state .tuple elements
     | .cons head tail => startCollect world state .cons [head, tail]

@@ -1,6 +1,7 @@
 import Erlean.Core.Scope
 import Erlean.Core.Match
 import Erlean.Core.Checks
+import Erlean.Core.Environment
 import Erlean.Import.Lower
 import Erlean.Semantics.Machine
 import Erlean.Examples.Identity

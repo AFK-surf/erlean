@@ -13,6 +13,9 @@ inductive Value where
   /-- Canonical bits for literal transport; no bit-segment operations are implied. -/
   | bitstring (bits : List Bool)
   | function (moduleName name : String) (arity : Nat)
+  /-- Finite lexical captures and a recursive code-group descriptor. -/
+  | closure (moduleName : String) (code : Nat) (captured : List (VarId × Value))
+      (group : List (VarId × Nat))
   deriving Repr
 
 mutual
@@ -27,6 +30,8 @@ def Value.equal (left right : Value) : Bool :=
   | .tuple xs, .tuple ys => Value.equalList xs ys
   | .bitstring xs, .bitstring ys => xs == ys
   | .function m f a, .function n g b => m == n && f == g && a == b
+  | .closure m c env group, .closure n d other bindings =>
+    m == n && c == d && group == bindings && Value.equalEnv env other
   | _, _ => false
 termination_by sizeOf left
 
@@ -34,6 +39,14 @@ def Value.equalList (left right : List Value) : Bool :=
   match left, right with
   | [], [] => true
   | x :: xs, y :: ys => x.equal y && Value.equalList xs ys
+  | _, _ => false
+termination_by sizeOf left
+
+def Value.equalEnv (left right : List (VarId × Value)) : Bool :=
+  match left, right with
+  | [], [] => true
+  | (id, value) :: rest, (other, rhs) :: remaining =>
+    id == other && value.equal rhs && Value.equalEnv rest remaining
   | _, _ => false
 termination_by sizeOf left
 end
@@ -87,6 +100,8 @@ inductive Expr where
   | apply (function : Expr) (arguments : List Expr)
   | primop (name : String) (arguments : List Expr)
   | funRef (name : String) (arity : Nat)
+  | makeClosure (code : Nat)
+  | letrec (bindings : List (VarId × Nat)) (body : Expr)
   | caseE (argument : Expr) (clauses : List (List Pattern × Expr × Expr))
   deriving Repr, BEq
 
@@ -99,10 +114,18 @@ structure FunctionDef where
   body : Expr
   deriving Repr, BEq
 
+structure ClosureDef where
+  params : List VarId
+  body : Expr
+  outerScope : List VarId
+  recursiveBindings : List (VarId × Nat) := []
+  deriving Repr, BEq
+
 structure Module where
   name : String
   exports : List (String × Nat)
   functions : List FunctionDef
+  closureCode : List ClosureDef := []
   deriving Repr, BEq
 
 abbrev CodeWorld := List Module

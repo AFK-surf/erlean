@@ -20,12 +20,12 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current checkpoint: imported recursive reversal verified (2026-09-09)
+### Current checkpoint: finite closures and recursive groups (2026-09-09)
 
 | Milestone | Status | Evidence / remaining work |
 | --- | --- | --- |
 | M0: reproducible input | Complete for the fixture profile | Reproducible real imports from all three languages, manifests, inventories, and rejection diagnostics pass. |
-| M1: sequential verification | In progress | Imported reversal proved for arbitrary lists, plus three identity contracts; closures, higher-order map, handlers, codec, and preservation remain open. |
+| M1: sequential verification | In progress | Imported reversal proved; closures and letrec execute; higher-order map contract, handlers, codec, and full preservation remain open. |
 | M2: modular proofs | Not started | Depends on linked execution and function contracts. |
 | M3: actor verification | Not started | Depends on sequential and runtime request interfaces. |
 
@@ -59,7 +59,7 @@ serialized through the primary agent.
   reports preserve rejected function signatures and original exports, preventing
   a missing implementation from silently becoming an Erlang `undef` result.
 - 2026-09-09: Initial function values represent named local functions only; closures,
-  `letrec`, external fun creation, and fun introspection are deferred.
+  `letrec`, external fun creation, and fun introspection were initially deferred.
 - 2026-09-09: Pin asdf Elixir `1.20.0` and Gleam `1.18.1`. Elixir uses its debug-info
   backend to recover Erlang forms; Gleam produces generated Erlang. Both flow into
   the same pinned OTP extraction stage and retain intermediate provenance hashes.
@@ -72,6 +72,14 @@ serialized through the primary agent.
 - 2026-09-09: Use focused simplification for the Elixir identity execution proof.
   Eager `cbv` expanded unrelated metadata and hit the heartbeat budget; focused
   rewriting checks in approximately two seconds under the same memory cap.
+- 2026-09-09: Add finite closures as module-local code references, captured values,
+  and recursive-group descriptors. The importer extracts nested code into a table,
+  reserves recursive slots before lowering members, and resolves lexical function
+  names before module references. This code extraction is inside the unverified
+  importer boundary; no translation-preservation theorem is claimed.
+- 2026-09-09: Reconstruct recursive bindings on application without cyclic values.
+  Capture all ambient lexical bindings initially. Structural closure comparison is
+  only internal machinery; OTP-observable fun equality/introspection remain unsupported.
 
 ### Validation and limitations
 
@@ -100,9 +108,16 @@ serialized through the primary agent.
   provenance for the Elixir and Gleam artifacts.
 - Kernel-checked generic execution results: step determinism, finite evaluation
   soundness/completeness, budget splitting, and stability under additional fuel.
-- Forty differential cases pass against OTP 29.0.6, including recursive list
+- Fifty differential cases pass against OTP 29.0.6, including recursive list
   functions, arbitrary-precision arithmetic, exceptions, operand order, context
   restoration, and all three source-language identities and constructors.
+- Closure cases cover capture, nested captures, returned closures used by callers,
+  named recursive sum, and recursive map capturing a second closure. The importer
+  rejects incomplete code tables, and the module checker validates capture scopes
+  and recursive code references. The higher-order map contract is still pending.
+- `Erlean.Core.Environment` proves lookup/key correspondence, environment extension,
+  parameter-zip coverage under arity agreement, and successful-pattern coverage.
+  These are preservation prerequisites, not a full machine preservation theorem.
 - Machine regressions check multiple values, invalid arities/scope, guard fallback,
   unsupported faults, fuel resumption, and bounded stack use for tail calls.
 - Scope and pattern checks cover integers, atoms, lists, tuples, alias bindings,
@@ -113,13 +128,12 @@ serialized through the primary agent.
   expose class/reason only; stack inspection and handlers are not yet implemented.
 - Unknown BIFs, unlinked dependencies, and other unsupported operations report
   model faults. Generated `module_info` calls remain visible obligations.
-- No full OTP compatibility, closure support, actor execution, or completed M1
+- No full OTP compatibility, actor execution, or completed M1
   claim is made. State preservation and recursive-function contracts remain open.
 
 ### Next work
 
-1. Add captured closures and `letrec`, then a higher-order map contract. OTP fixture
-   inspection confirms lexical tuple function names must resolve before module refs.
+1. Prove a higher-order map contract using the now-executable closure support.
 2. Strengthen accepted-Core invariants and prove local state preservation; develop
    environment coverage lemmas alongside closure integration.
 3. Generalize frame and call proof rules for dependency-contract reuse.
@@ -134,8 +148,11 @@ serialized through the primary agent.
   generic runner proofs, and the imported Erlang identity contract; pushed.
 - `64a7760`: three-language contracts, 40 differential cases, canonical bitstring
   literals, alias patterns, and resource-bounded serial verification; pushed.
-- Current checkpoint: imported arbitrary-list reversal and reusable finite-prefix
-  composition rules. Full bounded suite passes; the carrying commit records its revision.
+- `cbbab32`: imported arbitrary-list reversal and reusable finite-prefix composition
+  rules; full bounded suite passed and commit was pushed.
+- Current checkpoint: finite captured closures, recursive groups, validated code
+  references, environment lemmas, and 50 differential cases. The carrying commit
+  records its revision.
 
 ## 1. Purpose and success criteria
 

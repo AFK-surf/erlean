@@ -59,6 +59,21 @@ function differential(input, compiled, name, values) {
 
 for (const [name, values] of cases) differential(artifact, source, name, values);
 
+const closureCases = [
+  ['capture', [integer(10), integer(7)]],
+  ['capture', [integer(-20), integer(7)]],
+  ['capture', [atom('bad'), integer(7)]],
+  ['nested', [integer(10), integer(20), integer(30)]],
+  ['named_sum', [integer(5), nil]],
+  ['named_sum', [integer(5), list([integer(1), integer(2), integer(3)])]],
+  ['named_sum', [integer(0), list([integer(1)], atom('improper'))]],
+  ['map_add', [integer(10), nil]],
+  ['map_add', [integer(10), list([integer(1), integer(2), integer(3)])]],
+  ['map_add', [integer(-2), list([integer(0), integer(2), integer(5)])]],
+];
+for (const [name, values] of closureCases) differential(
+  'tests/fixtures/erlang/closures/core.json', 'tests/fixtures/erlang/closures.erl', name, values);
+
 const languageCases = [
   ['identity', [{ tag: 'bitstring', bits: '3', hex: 'a0' }]],
   ['identity', [{ tag: 'bitstring', bits: '0', hex: '' }]],
@@ -84,4 +99,4 @@ assert.match(unsupported.stderr, /unsupported.*get_module_info/s);
 const exhausted = run(executable, ['run', artifact, 'loop', '[]', '50']);
 assert.equal(exhausted.status, 2, 'Fuel exhaustion has its own exit status');
 assert.match(exhausted.stderr, /Fuel exhausted/);
-console.log(`Sequential checks passed: ${cases.length + 2 * languageCases.length} OTP 29.0.6 differential cases across Erlang, Elixir, and Gleam; unsupported runtime fault; fuel exhaustion.`);
+console.log(`Sequential checks passed: ${cases.length + closureCases.length + 2 * languageCases.length} OTP 29.0.6 differential cases across Erlang, Elixir, and Gleam; unsupported runtime fault; fuel exhaustion.`);

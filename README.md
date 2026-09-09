@@ -5,8 +5,9 @@ The target runtime is **Erlang/OTP 29**. The project aims to verify compiled
 Erlang, Elixir, and Gleam modules using executable semantics and proofs in Lean.
 
 The initial slice imports real modules from all three languages, proves their
-identity functions for arbitrary modeled values, and passes 40 OTP differential
-cases. Closures, full exception handling, and actor semantics remain future work.
+identity functions for arbitrary modeled values, proves recursive list reversal,
+and passes 50 OTP differential cases. Captured closures and recursive groups are
+executable; full exception handling and actor semantics remain in development.
 
 See the [design document](docs/design.md) for the architecture, trust boundary,
 verification interfaces, and implementation milestones.

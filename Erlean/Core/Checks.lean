@@ -51,13 +51,21 @@ example : scopeCheck [] (.caseE (.lit .nil)
     [([.alias 0 (.var 0)], .lit (.atom "true"), .var 0)]) = false := by
   simp [scopeCheck, scopeCheckClauses, Pattern.binders, freshBinders]
 
-example : Module.check ⟨"example", [("missing", 0)], []⟩ = false := by decide
+example : Module.check ⟨"example", [("missing", 0)], [], []⟩ = false := by decide
 
 example : Module.check ⟨"example", [("identity", 1)],
-    [⟨"identity", [0], .var 0⟩]⟩ = true := by
-  simp [Module.check, FunctionDef.scopeCheck, scopeCheck]
+    [⟨"identity", [0], .var 0⟩], []⟩ = true := by
+  simp [Module.check, FunctionDef.scopeCheck, scopeCheck, closureRefsCheck]
 
 example : Module.check ⟨"example", [],
-    [⟨"identity", [0], .var 0⟩, ⟨"identity", [1], .var 1⟩]⟩ = false := by decide
+    [⟨"identity", [0], .var 0⟩, ⟨"identity", [1], .var 1⟩], []⟩ = false := by decide
+
+example : closureRefsCheck [] [] (.makeClosure 0) = false := by simp [closureRefsCheck]
+
+example : closureRefsCheck [⟨[1], .var 0, [0], []⟩] [] (.makeClosure 0) = false := by simp [closureRefsCheck]
+
+example : closureRefsCheck [⟨[1], .var 0, [0], []⟩] [0] (.makeClosure 0) = true := by simp [closureRefsCheck]
+
+example : ClosureDef.check [] ⟨[0], .var 0, [0], []⟩ = false := by decide
 
 end Erlean.Core.Checks

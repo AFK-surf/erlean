@@ -96,6 +96,7 @@ def importedGleamModule : Erlean.Core.Module :=
                                 "match_fail"
                                 [Erlean.Core.Expr.tuple
                                    [Erlean.Core.Expr.lit (Erlean.Core.Value.atom "function_clause"),
-                                    Erlean.Core.Expr.var 1]])] }] }
+                                    Erlean.Core.Expr.var 1]])] }],
+  closureCode := [] }
 
 end Erlean.Examples

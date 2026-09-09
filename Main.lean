@@ -26,6 +26,8 @@ private def encodeValue : Value → Lean.Json
       ("bits", string (toString bits.length)), ("hex", string (encodeBits bits))]
   | .function mod name arity => Lean.Json.mkObj [("tag", string "function"),
       ("module", string mod), ("name", string name), ("arity", toJson arity)]
+  | .closure mod code _ _ => Lean.Json.mkObj [("tag", string "closure"),
+      ("module", string mod), ("code", toJson code)]
 
 private def load (path : String) : IO ModuleReport := do
   checked (lowerModule (← readArtifact path))

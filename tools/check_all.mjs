@@ -18,6 +18,7 @@ const hash = path => createHash('sha256').update(readFileSync(path)).digest('hex
 const fixtures = [
   'tests/fixtures/erlang/identity',
   'tests/fixtures/erlang/sequential',
+  'tests/fixtures/erlang/closures',
   'tests/fixtures/elixir/identity',
   'tests/fixtures/gleam/identity',
 ];
