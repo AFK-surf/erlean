@@ -20,7 +20,57 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current work: Cue controller verification support (2026-09-09)
+### Current work: finite maps for the verified Session kernel
+
+The next objective is a production-used verified Session reducer, starting with
+durable async-call lifecycle fields. First add the generic map semantics that
+this reducer needs. Then record the complete kernel boundary and migration plan
+in Cue, and implement the first real State-authority slice in Cue PR #1581.
+Do not claim that the first slice verifies the complete Session lifecycle.
+
+The initial map profile uses sorted, unique entries with a separate recursive
+data-key type. Canonical order is internal, not Erlang term or iteration order.
+Supported keys cover integers, atoms, lists, tuples, bitstrings, pids, and refs.
+Float, function, and map keys remain explicit unsupported operations. Values can
+contain nested maps. Function values remain transportable but not comparable.
+Every import and update must preserve canonical form. Equality reflection must
+agree with finite-map lookup semantics, not the order of input entries.
+
+Add map literals, associative and exact updates, literal-key map patterns, and
+the required direct map BIFs. Bound-variable map patterns and map iteration are
+outside this first profile. Preserve pinned Core operand evaluation order and
+distinguish `badmap`, `badkey`, and unsupported model operations. Upstream fixtures
+use asdf OTP 29.0.6. Cue artifacts retain asdf OTP 29.0.2 and exact provenance.
+Use [OTP map expressions](https://www.erlang.org/doc/system/expressions.html#map-expressions)
+and the installed pinned compiler source as the semantic references.
+
+An independent review found that the OTP backend sorts adjacent literal-key
+groups. Multiple missing exact keys can therefore produce a different `badkey`
+than a source-order fold. A preflight shadow fold counts distinct unsatisfied
+first-write exact obligations. More than one produces an explicit unsupported
+model fault. All successful updates and single-missing-key failures remain in
+the profile. This conservative restriction also rejects some variable-key cases
+whose failure order OTP fixes. Do not present internal canonical key order as
+the missing OTP term order. Differential tests cover this rejection separately.
+
+The float-free comparable profile also supports `==`, `/=`, and `=/=`.
+`is_binary/1` accepts only whole-byte bitstrings. Neither addition permits floats
+or function equality. The key algebra, value bridges, importer, map matching,
+and execution machine have compiled. Full regression validation remains pending.
+
+Checkpoint: the independent `Core.MapKey` and `Core.FiniteMap` modules passed
+serial compilation and a focused axiom audit. Their laws use only `propext`,
+`Classical.choice`, and `Quot.sound`. This foundation checkpoint does not enable
+map execution by itself. Syntax integration, execution regressions, and Cue work
+remain in progress. Existing Dijkstra stepping proofs need a bounded proof-cost
+repair after the value-type extension. No theorem statement or memory cap changes.
+
+Subagents author key/map algebra and compatibility fixtures. The primary agent
+owns machine/importer integration and all serial builds and tests. Build scripts
+stay unchanged. Inventory is complete for the first slice. Implementation,
+preservation proofs, compatibility checks, and Cue design publication remain pending.
+
+### Previous work: Cue controller verification support (2026-09-09)
 
 The current cleanup moves all-trace exactness into `Controller.Trace.exact`.
 Every related concrete step must match the deterministic model's state and
