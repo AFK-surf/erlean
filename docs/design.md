@@ -20,7 +20,30 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current checkpoint: GitHub Actions verification (2026-09-09)
+### Current work: Cue controller verification support (2026-09-09)
+
+Cue will consume Erlean through a pinned Git dependency to prove its production
+Agent Loop kernel. Add explicit OTP `29.0.2` import support alongside the existing
+`29.0.6` fixture profile. Export requires the exact selected runtime patch and
+never relabels another patch. The default toolchain and fixtures stay unchanged.
+The actual Cue kernel exports and lowers under asdf OTP `29.0.2` without rejected
+functions. Its control data needs only existing tuple, atom, reference, and
+integer operations. No business-specific semantic rule is added.
+
+New comparable-data equality reflection and finite controller trace lemmas have
+passed the serialized Lean build. Function identity remains unsupported. Trace
+lifting requires an actual one-step implementation refinement and does not prove
+external effect execution, truthful storage responses, or infinite-schedule
+liveness. The full regression suite and axiom audit passed, including 91
+sequential differential cases, 17 actor scenarios, and 28 graph/input checks.
+The new lemmas use only standard kernel axioms. Re-exported fixture manifests
+refresh exporter provenance without changing Core literals. Explicit profile
+selection and rejection of unsupported or mismatched patches pass. Next, pin
+this library checkpoint in Cue and check its universal compiled-controller proofs.
+The Cue plan and production adapter obligations live in that repository at
+`docs/salix/agent-loop-kernel-verification.md`.
+
+### Previous checkpoint: GitHub Actions verification (2026-09-09)
 
 GitHub Actions now runs a single Ubuntu 24.04 job on pull requests, pushes to
 `main`, and manual dispatch. It installs the pinned Lean toolchain and manages

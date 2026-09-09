@@ -70,7 +70,8 @@ def decodeArtifact (j : Lean.Json) (depth : Nat := 4096) : Except String Artifac
   unless (← stringField j "format") == "erlean.raw-core" do throw "Unsupported artifact format"
   unless (← (← field j "version").getNat?) == 1 do throw "Unsupported artifact version"
   let otpVersion ← stringField j "otp_version"
-  unless otpVersion == "29.0.6" do throw "Artifact must target the pinned OTP 29.0.6"
+  unless otpVersion == "29.0.6" || otpVersion == "29.0.2" do
+    throw "Artifact must target a supported exact OTP profile: 29.0.2 or 29.0.6"
   let moduleName ← stringField j "module"
   let core ← decodeTerm depth (← field j "core")
   return { otpVersion, moduleName, core, document := j }

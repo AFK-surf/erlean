@@ -1,3 +1,5 @@
+import Erlean.Core.Equality
+import Erlean.Logic.Controller
 import Erlean.Examples.Identity.Contract
 import Erlean.Examples.Identity.Languages
 import Erlean.Examples.Sequential.Reverse
@@ -46,3 +48,7 @@ import Erlean.Examples.Dijkstra.Correctness
 #print axioms Erlean.Examples.Dijkstra.search_returns
 #print axioms Erlean.Examples.Dijkstra.dijkstra_terminates_correct
 #print axioms Erlean.Examples.Dijkstra.dijkstra_total_correct
+#print axioms Erlean.Core.Value.equal_eq_true
+#print axioms Erlean.Core.Value.public_of_exactComparable
+#print axioms Erlean.Logic.Controller.Trace.safe
+#print axioms Erlean.Logic.Controller.trace_of_refinement

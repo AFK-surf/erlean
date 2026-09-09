@@ -1,6 +1,6 @@
 // Run from the repository root with Node.js and the pinned asdf OTP installed.
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -16,6 +16,16 @@ function run(source, destination) {
 const source = 'tests/fixtures/erlang/identity.erl';
 run(source, join(output, 'first'));
 run(source, join(output, 'second'));
+execFileSync('asdf', ['exec', 'escript', exporter, '--otp', '29.0.6', source,
+  join(output, 'explicit')], { stdio: 'pipe' });
+assert.deepEqual(readFileSync(join(output, 'first', 'core.json')),
+  readFileSync(join(output, 'explicit', 'core.json')));
+for (const version of ['29.0.2', '29.0.5']) {
+  const rejected = spawnSync('asdf', ['exec', 'escript', exporter, '--otp', version,
+    source, join(output, `rejected-${version}`)], { encoding: 'utf8' });
+  assert.notEqual(rejected.status, 0, 'A different running patch must not be relabeled');
+  assert.match(rejected.stderr, /unsupported_otp_(patch|profile)/);
+}
 for (const name of ['core.json', 'manifest.json', 'inventory.json']) {
   assert.deepEqual(readFileSync(join(output, 'first', name)), readFileSync(join(output, 'second', name)));
 }

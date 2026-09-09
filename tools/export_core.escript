@@ -9,27 +9,36 @@ main(["--check-encoding"]) ->
     #{<<"bits">> := <<"8000000000000000">>} = term(-0.0),
     io:format("Direct term encoding checks passed.~n", []);
 main(["--forms", Source, Output]) ->
-    guarded_export(Source, Output, forms);
+    guarded_export(Source, Output, forms, <<"29.0.6">>);
+main(["--otp", Expected, "--forms", Source, Output]) ->
+    guarded_export(Source, Output, forms, list_to_binary(Expected));
+main(["--otp", Expected, Source, Output]) ->
+    guarded_export(Source, Output, file, list_to_binary(Expected));
 main([Source, Output]) ->
-    guarded_export(Source, Output, file);
+    guarded_export(Source, Output, file, <<"29.0.6">>);
 main(_) ->
-    io:format(standard_error, "Usage: asdf exec escript tools/export_core.escript [--forms] SOURCE OUTPUT_DIRECTORY~n", []),
+    io:format(standard_error, "Usage: asdf exec escript tools/export_core.escript [--otp 29.0.2|29.0.6] [--forms] SOURCE OUTPUT_DIRECTORY~n", []),
     halt(2).
 
-guarded_export(Source, Output, Kind) ->
-    try export(Source, Output, Kind)
+guarded_export(Source, Output, Kind, Expected) ->
+    try export(Source, Output, Kind, Expected)
     catch Class:Reason:Stack ->
         io:format(standard_error, "Core export failed: ~p:~p~n~p~n", [Class, Reason, Stack]),
         halt(1)
     end.
 
-export(Source, Output, Kind) ->
+export(Source, Output, Kind, Expected) ->
+    case Expected of
+        <<"29.0.2">> -> ok;
+        <<"29.0.6">> -> ok;
+        _ -> error({unsupported_otp_profile, Expected})
+    end,
     VersionFile = filename:join([code:root_dir(), "releases", "29", "OTP_VERSION"]),
     {ok, VersionBytes} = file:read_file(VersionFile),
     Version = string:trim(VersionBytes),
     case Version of
-        <<"29.0.6">> -> ok;
-        _ -> error({unsupported_otp_patch, Version, expected, <<"29.0.6">>})
+        Expected -> ok;
+        _ -> error({unsupported_otp_patch, Version, expected, Expected})
     end,
     Options = [to_core, binary, no_copt, deterministic, return_errors, return_warnings],
     Compiled = case Kind of

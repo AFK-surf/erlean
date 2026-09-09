@@ -78,6 +78,14 @@ def main : IO Unit := do
   let artifact ← readArtifact "tests/fixtures/erlang/identity/core.json"
   let .ok report := lowerModule artifact | throw (IO.userError "Real OTP fixture failed to lower")
   assertTrue (artifact.otpVersion == "29.0.6") "exact OTP patch"
+  for version in ["29.0.2", "29.0.6"] do
+    let profile := Lean.Json.mkObj
+      [("format", .str "erlean.raw-core"), ("version", Lean.toJson (1 : Nat)),
+        ("otp_version", .str version), ("module", .str "profile_check"),
+        ("core", Lean.Json.mkObj [("tag", .str "nil")])]
+    let .ok decoded := decodeArtifact profile
+      | throw (IO.userError s!"Supported exact OTP profile rejected: {version}")
+    assertTrue (decoded.otpVersion == version) "profile preserved without relabeling"
   expectError (decodeArtifact (Lean.Json.mkObj
     [("format", .str "erlean.raw-core"), ("version", Lean.toJson (1 : Nat)),
       ("otp_version", .str "29.0.5")])) "different OTP patch"

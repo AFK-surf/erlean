@@ -1,4 +1,6 @@
 import Erlean.Core.Scope
+import Erlean.Core.Equality
+import Erlean.Logic.Controller
 import Erlean.Core.Match
 import Erlean.Core.Checks
 import Erlean.Core.Environment
