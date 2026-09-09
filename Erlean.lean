@@ -4,6 +4,7 @@ import Erlean.Core.Checks
 import Erlean.Import.Lower
 import Erlean.Semantics.Machine
 import Erlean.Examples.Identity
+import Erlean.Examples.LanguageIdentity
 
 /-!
 # erlean

@@ -38,6 +38,13 @@ def main : IO Unit := do
   expectError (lowerExpr 64 [] (record "c_var" [.integer 99])) "unbound variable"
   expectError (lowerExpr 64 [] (record "c_receive" [])) "unsupported construct"
   expectError (lowerValue 64 (.float "3ff0000000000000")) "unsupported value profile"
+  expectError (lowerBitstring 3 "a1") "nonzero bitstring padding"
+  expectError (lowerBitstring 8 "zz") "invalid bitstring digit"
+  assertTrue (isOkEq (lowerBitstring 3 "a0") (.bitstring [true, false, true]))
+    "partial-byte bitstring"
+  let expected := Value.bitstring [true, false, true, false, true, true, true, true]
+  assertTrue (isOkEq (lowerBitstring 8 "Af") expected &&
+    isOkEq (lowerBitstring 8 "af") expected) "canonical bitstring representation"
   expectError (lowerExpr 64 [] (record "c_primop"
     [record "c_literal" [.atom "recv_peek_message"], .nil])) "unsupported primop"
   let var := record "c_var" [.integer 0]

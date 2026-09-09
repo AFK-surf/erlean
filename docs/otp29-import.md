@@ -117,6 +117,15 @@ tuples inside literals remain literal terms and must not be interpreted as synta
 
 ## Manifest and inventory
 
+The current Lean execution slice accepts integer, atom, list, tuple, and canonical
+bitstring literals, together with alias patterns. Bitstring construction segments,
+segment matching, maps, floats, closures, and unlisted runtime operations remain
+unsupported. Literal transport is broader than executable semantics.
+
+Elixir metadata functions are retained whole. Their structural import does not
+imply that their runtime BIF dependencies are implemented; these remain visible
+call obligations. See the design tracker for verified entry points and limitations.
+
 The companion `manifest.json` records exact OTP patch, compiler options, stage,
 source path, source SHA-256, exact `core.json` byte SHA-256, exporter SHA-256,
 platform architecture and endianness, and compiler warnings. This initial adapter

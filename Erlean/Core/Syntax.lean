@@ -10,6 +10,8 @@ inductive Value where
   | nil
   | cons (head tail : Value)
   | tuple (elements : List Value)
+  /-- Canonical bits for literal transport; no bit-segment operations are implied. -/
+  | bitstring (bits : List Bool)
   | function (moduleName name : String) (arity : Nat)
   deriving Repr
 
@@ -23,6 +25,7 @@ def Value.equal (left right : Value) : Bool :=
   | .nil, .nil => true
   | .cons a b, .cons c d => a.equal c && b.equal d
   | .tuple xs, .tuple ys => Value.equalList xs ys
+  | .bitstring xs, .bitstring ys => xs == ys
   | .function m f a, .function n g b => m == n && f == g && a == b
   | _, _ => false
 termination_by sizeOf left
@@ -64,6 +67,7 @@ end Env
 inductive Pattern where
   | wild
   | var (id : VarId)
+  | alias (id : VarId) (pattern : Pattern)
   | lit (value : Value)
   | cons (head tail : Pattern)
   | tuple (elements : List Pattern)

@@ -1,6 +1,7 @@
 name = "erlean"
 version = "0.1.0"
 defaultTargets = ["Erlean", "erlean"]
+moreLeanArgs = ["-j1", "-M2048"]
 
 [[lean_lib]]
 name = "Erlean"

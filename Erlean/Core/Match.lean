@@ -9,6 +9,9 @@ def matchPattern (pattern : Pattern) (value : Value) : Option Env :=
   match pattern, value with
   | .wild, _ => some []
   | .var id, value => some [(id, value)]
+  | .alias id pattern, value => do
+      let env ← matchPattern pattern value
+      pure ((id, value) :: env)
   | .lit expected, value => if expected == value then some [] else none
   | .cons head tail, .cons first rest => do
       let headEnv ← matchPattern head first
@@ -73,6 +76,13 @@ theorem matchPattern_keys (pattern : Pattern) (value : Value) (env : Env)
       have he : [(id, value)] = env := by simpa [matchPattern] using h
       subst env
       simp [Pattern.binders]
+  | .alias id pattern, value =>
+      cases hm : matchPattern pattern value with
+      | none => simp [matchPattern, hm] at h
+      | some inner =>
+          have he : (id, value) :: inner = env := by simpa [matchPattern, hm] using h
+          subst env
+          simp [Pattern.binders, matchPattern_keys pattern value inner hm]
   | .lit expected, value =>
       by_cases equal : (expected == value) = true
       · have he : [] = env := by simpa [matchPattern, equal] using h
@@ -96,9 +106,9 @@ theorem matchPattern_keys (pattern : Pattern) (value : Value) (env : Env)
       simpa [Pattern.binders] using
         matchPatterns_keys patterns values env (by simpa [matchPattern] using h)
   | .cons _ _, .integer _ | .cons _ _, .atom _ | .cons _ _, .nil
-  | .cons _ _, .tuple _ | .cons _ _, .function _ _ _
+  | .cons _ _, .tuple _ | .cons _ _, .bitstring _ | .cons _ _, .function _ _ _
   | .tuple _, .integer _ | .tuple _, .atom _ | .tuple _, .nil
-  | .tuple _, .cons _ _ | .tuple _, .function _ _ _ =>
+  | .tuple _, .cons _ _ | .tuple _, .bitstring _ | .tuple _, .function _ _ _ =>
       simp [matchPattern] at h
 termination_by sizeOf pattern
 

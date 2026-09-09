@@ -14,3 +14,7 @@
   completed checks, limitations, and next steps at each implementation checkpoint.
 - Keep work in reviewable commits and push validated checkpoints to the configured
   remote when working under the project's standing commit-and-push instruction.
+- Run builds and verification serially through the primary agent. Use
+  `node tools/build.mjs` for dependency-ordered builds with one compilation at a
+  time. Do not run overlapping Lake builds or test suites from subagents.
+  Lean compiler processes are capped at 2 GiB and one worker thread.

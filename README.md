@@ -4,6 +4,10 @@ Core Erlang executable semantics in Lean 4
 The target runtime is **Erlang/OTP 29**. The project aims to verify compiled
 Erlang, Elixir, and Gleam modules using executable semantics and proofs in Lean.
 
+The initial slice imports real modules from all three languages, proves their
+identity functions for arbitrary modeled values, and passes 40 OTP differential
+cases. Closures, full exception handling, and actor semantics remain future work.
+
 See the [design document](docs/design.md) for the architecture, trust boundary,
 verification interfaces, and implementation milestones.
 
@@ -15,9 +19,8 @@ Install the pinned Lean toolchain with elan and OTP with asdf. The Erlang asdf
 plugin must be available before running `asdf install erlang 29.0.6`.
 
 ```sh
-lake build
-node tools/check_export.mjs
-lake env lean --run tests/import/Smoke.lean
+node tools/build.mjs
+node tools/check_all.mjs
 lake exe erlean inspect tests/fixtures/erlang/identity/core.json
 lake exe erlean run tests/fixtures/erlang/identity/core.json answer '[]'
 ```
@@ -29,3 +32,7 @@ compilers. See the [OTP import notes](docs/otp29-import.md) for the schema.
 
 Implementation coverage and the next work items are tracked in the
 [design document](docs/design.md#implementation-tracker).
+
+Builds are serialized by the build script, and each Lean process is limited to
+one thread and 2 GiB. Run only one verification suite at a time; subagents must
+not launch overlapping builds. The full suite also limits Erlang scheduler counts.

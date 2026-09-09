@@ -8,6 +8,12 @@ private def checked {α : Type} : Except String α → IO α
 
 private def string (value : String) : Lean.Json := .str value
 
+private def encodeBits (bits : List Bool) : String :=
+  String.ofList ((List.range (2 * ((bits.length + 7) / 8))).map fun index =>
+    let nibble := (List.range 4).foldl (fun value offset =>
+      value * 2 + if bits[index * 4 + offset]?.getD false then 1 else 0) 0
+    "0123456789abcdef".toList[nibble]?.getD '0')
+
 private def encodeValue : Value → Lean.Json
   | .integer value => Lean.Json.mkObj [("tag", string "integer"), ("value", string (toString value))]
   | .atom value => Lean.Json.mkObj [("tag", string "atom"), ("value", string value)]
@@ -16,6 +22,8 @@ private def encodeValue : Value → Lean.Json
       ("head", encodeValue head), ("tail", encodeValue tail)]
   | .tuple values => Lean.Json.mkObj [("tag", string "tuple"),
       ("items", .arr (values.map encodeValue).toArray)]
+  | .bitstring bits => Lean.Json.mkObj [("tag", string "bitstring"),
+      ("bits", string (toString bits.length)), ("hex", string (encodeBits bits))]
   | .function mod name arity => Lean.Json.mkObj [("tag", string "function"),
       ("module", string mod), ("name", string name), ("arity", toJson arity)]
 

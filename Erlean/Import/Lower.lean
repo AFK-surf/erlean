@@ -26,6 +26,22 @@ private def signature : Term → Except String (String × Nat)
   | .tuple [.atom name, .integer (.ofNat arity)] => .ok (name, arity)
   | _ => .error "Expected a function name/arity pair"
 
+/-- Decode canonical bitstring literals without discarding nonzero padding.
+    Runtime bit construction and segment matching remain outside this profile. -/
+def lowerBitstring (count : Nat) (hex : String) : Except String Value := do
+  unless hex.length == 2 * ((count + 7) / 8) do
+    throw "Bitstring byte encoding does not match its length"
+  let nibbles ← hex.toList.mapM fun c => do
+    if '0' ≤ c && c ≤ '9' then pure (c.toNat - '0'.toNat)
+    else if 'a' ≤ c && c ≤ 'f' then pure (c.toNat - 'a'.toNat + 10)
+    else if 'A' ≤ c && c ≤ 'F' then pure (c.toNat - 'A'.toNat + 10)
+    else throw "Invalid hexadecimal digit in bitstring literal"
+  let bits := nibbles.flatMap fun n =>
+    [n / 8 % 2 == 1, n / 4 % 2 == 1, n / 2 % 2 == 1, n % 2 == 1]
+  unless (bits.drop count).all (· == false) do
+    throw "Bitstring literal has nonzero unused padding bits"
+  return .bitstring (bits.take count)
+
 def lowerValue : Nat → Term → Except String Value
   | 0, _ => .error "Literal nesting exceeds the import depth limit"
   | fuel + 1, term => do
@@ -38,7 +54,7 @@ def lowerValue : Nat → Term → Except String Value
       let items ← items.mapM (lowerValue fuel)
       return items.foldr Value.cons (← lowerValue fuel tail)
     | .float _ => throw "Unsupported literal: float"
-    | .bitstring _ _ => throw "Unsupported literal: bitstring"
+    | .bitstring bits hex => lowerBitstring bits hex
     | .map _ => throw "Unsupported literal: map"
 
 abbrev NameScope := List (Term × VarId)
@@ -62,6 +78,8 @@ private def patternNames : Nat → Term → Except String (List Term)
   | fuel + 1, term => do
     match term with
     | .tuple [.atom "c_var", _, name] => return [name]
+    | .tuple [.atom "c_alias", _, binder, pattern] =>
+      return (← variableName binder) :: (← patternNames fuel pattern)
     | .tuple [.atom "c_literal", _, _] => return []
     | .tuple [.atom "c_cons", _, head, tail] =>
       return (← patternNames fuel head) ++ (← patternNames fuel tail)
@@ -74,6 +92,8 @@ private def lowerPattern : Nat → NameScope → Term → Except String Pattern
   | fuel + 1, scope, term => do
     match term with
     | .tuple [.atom "c_var", _, name] => return .var (← lookup scope name)
+    | .tuple [.atom "c_alias", _, binder, pattern] =>
+      return .alias (← lookup scope (← variableName binder)) (← lowerPattern fuel scope pattern)
     | .tuple [.atom "c_literal", _, value] => return .lit (← lowerValue fuel value)
     | .tuple [.atom "c_cons", _, head, tail] =>
       return .cons (← lowerPattern fuel scope head) (← lowerPattern fuel scope tail)

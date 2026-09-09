@@ -20,18 +20,26 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current checkpoint: first Erlang execution (2026-09-09)
+### Current checkpoint: three-language verification slice (2026-09-09)
 
 | Milestone | Status | Evidence / remaining work |
 | --- | --- | --- |
-| M0: reproducible input | In progress | All three source adapters export reproducibly; final cross-language execution/proof checks in progress. |
-| M1: sequential verification | In progress | Total local machine and CLI execute imported identity; generic runner theorems checked; imported contracts and differential tests in progress. |
+| M0: reproducible input | Complete for the fixture profile | Reproducible real imports from all three languages, manifests, inventories, and rejection diagnostics pass. |
+| M1: sequential verification | In progress | Three imported universal identity contracts and 40 differential cases pass; recursive contracts, closures, handlers, and preservation remain open. |
 | M2: modular proofs | Not started | Depends on linked execution and function contracts. |
 | M3: actor verification | Not started | Depends on sequential and runtime request interfaces. |
 
-Active work is split between Elixir/Gleam adapters, imported-module contracts, and
-sequential differential regressions. Shared integration files and this tracker are
-maintained by the primary agent.
+The first end-to-end success criterion is met for small identity modules from all
+three source languages. This is a restricted sequential slice, not completion of
+the broader M1 language coverage or general module verification.
+
+Recovery note: the user reported an OOM kill during parallel implementation.
+Subagent builds are paused. Verification now runs serially through
+`node tools/build.mjs`, with a build lock, one Lean worker per process, and a 2 GiB
+Lean memory limit. The exact killed process was not established from available
+logs. Recovery and the complete test suite passed with these limits. Parallel
+implementation may resume on independent files, but builds and test suites remain
+serialized through the primary agent.
 
 ### Decision log
 
@@ -58,10 +66,18 @@ maintained by the primary agent.
 - 2026-09-09: Normalize `match_fail` function-clause descriptors to the observable
   `function_clause` atom. Differential execution exposed the incorrect metadata
   tuple result; argument metadata belongs to the unmodeled stacktrace.
+- 2026-09-09: Add canonical bitstring literal values (`List Bool`) and alias
+  patterns to retain Elixir's generated `__info__/1` intact. Padding must be zero;
+  bit-segment construction/matching and bitstring BIFs are still unsupported.
+- 2026-09-09: Use focused simplification for the Elixir identity execution proof.
+  Eager `cbv` expanded unrelated metadata and hit the heartbeat budget; focused
+  rewriting checks in approximately two seconds under the same memory cap.
 
 ### Validation and limitations
 
-- `lake build` passes for the library and `erlean` executable.
+- `node tools/check_all.mjs` passes the full bounded suite after OOM recovery.
+  `node tools/build.mjs` compiles modules and native objects in dependency order;
+  the final library, executable, and all example proofs build successfully.
 - `lake env lean --run tests/import/Smoke.lean` passes malformed-input, precision,
   lexical scope, unsupported-feature, and real OTP fixture checks.
 - `node tools/check_export.mjs` checks reproducible extraction, hashes, operation
@@ -69,32 +85,48 @@ maintained by the primary agent.
 - `Erlean.Examples.identity_totalCorrect` proves total correctness for every Value
   input of the actual emitted Erlang identity AST. Its axiom audit reports only
   `propext` and `Quot.sound`; no `sorry`, custom axiom, or native execution axiom.
+- `gleam_identity_totalCorrect` and `elixir_identity_totalCorrect` prove the same
+  contract against exact emitted modules. The Elixir proof additionally uses
+  Lean's standard `Classical.choice`. The suite prints all three axiom sets and
+  checks that generated Lean fixtures exactly match current importer output.
 - `node tools/check_languages.mjs` checks reproducibility and source/intermediate
   provenance for the Elixir and Gleam artifacts.
 - Kernel-checked generic execution results: step determinism, finite evaluation
   soundness/completeness, budget splitting, and stability under additional fuel.
-- Scope and pattern checks cover the initial integer/atom/list/tuple profile.
+- Forty differential cases pass against OTP 29.0.6, including recursive list
+  functions, arbitrary-precision arithmetic, exceptions, operand order, context
+  restoration, and all three source-language identities and constructors.
+- Machine regressions check multiple values, invalid arities/scope, guard fallback,
+  unsupported faults, fuel resumption, and bounded stack use for tail calls.
+- Scope and pattern checks cover integers, atoms, lists, tuples, alias bindings,
+  and bitstring literals. `Module.check` establishes lexical/signature checks,
+  not complete Core arity validation or guard-grammar validity.
 - Machine support includes multi-values, binding, sequencing, construction,
   named calls, cases/guards, selected integer BIFs, and `match_fail/1`. Exceptions
   expose class/reason only; stack inspection and handlers are not yet implemented.
 - Unknown BIFs, unlinked dependencies, and other unsupported operations report
   model faults. Generated `module_info` calls remain visible obligations.
-- No full OTP compatibility, closure support, actor execution, or completed M0/M1
+- No full OTP compatibility, closure support, actor execution, or completed M1
   claim is made. State preservation and recursive-function contracts remain open.
 
 ### Next work
 
-1. Prove an arbitrary-input contract against the emitted real Erlang AST.
-2. Complete recursive-list and exception/guard differential regression coverage.
-3. Finish Elixir/Gleam adapters and execute their real exported artifacts.
-4. Establish repeatable checks and push each validated implementation checkpoint.
+1. Prove a recursive list-function contract against imported Core, beginning with
+   accumulator-based reversal; provide reusable frame and call proof rules.
+2. Strengthen accepted-Core invariants and prove local state preservation.
+3. Add captured closures and `letrec`, then a higher-order map contract.
+4. Extend exception handlers and the codec-required map/bitstring operations.
+5. Progress to M2 dependency-contract reuse before starting M3 actor semantics.
 
 ### Commit checkpoints
 
 - `a9c21be`: design, repository instructions, and buildable Lean bootstrap; pushed
   to `origin/main`.
-- Next checkpoint: three source exporters, OTP import, first local machine, CLI,
-  generic runner proofs, and the imported Erlang identity contract.
+- `78c590a`: three source exporters, OTP import, first local machine, CLI,
+  generic runner proofs, and the imported Erlang identity contract; pushed.
+- Current checkpoint: three-language contracts, 40 differential cases, canonical
+  bitstring literals, alias patterns, and resource-bounded serial verification.
+  The commit carrying this tracker update records the exact revision.
 
 ## 1. Purpose and success criteria
 

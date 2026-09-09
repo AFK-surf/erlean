@@ -43,6 +43,14 @@ example : matchPattern (.cons (.var 0) (.var 1))
 
 example : matchPatterns [.wild] [] = none := by simp [matchPatterns]
 
+example : matchPattern (.alias 0 (.cons (.var 1) .wild))
+    (.cons (.integer 7) .nil) = some [(0, .cons (.integer 7) .nil), (1, .integer 7)] := by
+  simp [matchPattern]
+
+example : scopeCheck [] (.caseE (.lit .nil)
+    [([.alias 0 (.var 0)], .lit (.atom "true"), .var 0)]) = false := by
+  simp [scopeCheck, scopeCheckClauses, Pattern.binders, freshBinders]
+
 example : Module.check ⟨"example", [("missing", 0)], []⟩ = false := by decide
 
 example : Module.check ⟨"example", [("identity", 1)],

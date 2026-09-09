@@ -14,6 +14,7 @@ theorem freshBinders_iff (scope binders : List VarId) :
 def Pattern.binders : Pattern → List VarId
   | .wild | .lit _ => []
   | .var id => [id]
+  | .alias id pattern => id :: pattern.binders
   | .cons head tail => head.binders ++ tail.binders
   | .tuple elements => elements.flatMap Pattern.binders
 
