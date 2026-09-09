@@ -30,13 +30,18 @@ outputs are not cached; source-language installations are cached against the
 toolchain and workflow definitions. Permissions are read-only, action references
 are commit-pinned, superseded runs are cancelled, and asdf compilation is capped
 at two workers alongside the existing one-worker/2 GiB Lean limits. Workflow
-lint passed; the first hosted run is in progress. Review caught checkout-specific
+lint passed. Review caught checkout-specific
 metadata in the Elixir companion BEAM. The adapter now uses an explicit relative
 filename and deterministic BEAM compilation, records those compiler options, and
 tests byte equality after relocating the fixture inputs to a temporary root.
 Relocation checks and the full local suite passed with refreshed artifact
 provenance. The emitted executable Elixir module literal is unchanged. The
-remaining validation is the fresh hosted workflow run.
+fresh hosted workflow also passed: [run 34332011416](https://github.com/AFK-surf/erlean/actions/runs/34332011416)
+at `d59ad64` completed in 8m53s, including toolchain installation, cold kernel
+checking, the complete suite, and a clean retained-artifact diff. GitHub emitted
+a non-fatal Node 20 action-runtime deprecation notice; these pinned actions ran
+successfully under the runner's Node 24 compatibility behavior. Future action
+updates should select native Node 24 releases and rerun the same checks.
 
 ### Validated example layout
 
@@ -382,9 +387,11 @@ serialized through the primary agent.
   declaration names and generated artifact contents.
 - `f22f33f`: GitHub Actions configuration for cold kernel checking,
   complete compatibility tests, and retained-artifact reproducibility.
-- Current checkpoint: deterministic, checkout-independent language extraction
+- `d59ad64`: deterministic, checkout-independent language extraction
   with a relocation regression and refreshed provenance. Workflow lint and the
-  complete local suite passed; hosted execution is being verified.
+  complete local suite and hosted CI run 34332011416 passed.
+- Current checkpoint: record successful cold hosted verification. No workflow,
+  source, artifact, or proof changes beyond the validated `d59ad64` checkpoint.
 
 ## 1. Purpose and success criteria
 
