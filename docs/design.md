@@ -20,7 +20,19 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current checkpoint: topic-based example layout (2026-09-09)
+### Current checkpoint: GitHub Actions verification (2026-09-09)
+
+GitHub Actions now runs a single Ubuntu 24.04 job on pull requests, pushes to
+`main`, and manual dispatch. It installs the pinned Lean toolchain and manages
+OTP/Elixir/Gleam through asdf and `.tool-versions`. The cold serialized build runs
+before the complete suite to avoid the suite's shorter per-stage timeout. Lean
+outputs are not cached; source-language installations are cached against the
+toolchain and workflow definitions. Permissions are read-only, action references
+are commit-pinned, superseded runs are cancelled, and asdf compilation is capped
+at two workers alongside the existing one-worker/2 GiB Lean limits. Workflow
+lint and the first hosted run are the remaining checks for this checkpoint.
+
+### Validated example layout
 
 Example sources now live in topic directories: `Identity`, `Sequential`,
 `HigherOrder`, `Modular`, `ByteCodec`, `Protocol`, and `Dijkstra`. Each directory
@@ -359,9 +371,11 @@ serialized through the primary agent.
   specialized examples reduced to links. The replacement proof snippet, axiom
   audit, local links, and whitespace checks passed; no full-suite rerun was
   needed for this documentation-only revision; pushed to `origin/main`.
-- Current checkpoint: move 31 example modules into topic directories and update
+- `db1633a`: move 31 example modules into topic directories and update
   all source imports, artifact check paths, and documentation. Preserve theorem
   declaration names and generated artifact contents.
+- Current checkpoint: GitHub Actions configuration for cold kernel checking,
+  complete compatibility tests, and retained-artifact reproducibility.
 
 ## 1. Purpose and success criteria
 

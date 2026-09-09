@@ -192,6 +192,11 @@ node tools/check_all.mjs
 Testing supplements the Lean proofs and does not establish compiler correctness
 or full OTP compatibility.
 
+[GitHub Actions CI](.github/workflows/ci.yml) runs the serialized build and full
+suite on pull requests and pushes to `main`, using the pinned Lean toolchain and
+asdf-managed source-language compilers. Lean build outputs are not cached, so
+each run checks the proofs from source.
+
 ## Further examples
 
 Explore [list reversal](Erlean/Examples/Sequential/Reverse.lean),

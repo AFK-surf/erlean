@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Kernel proofs and OTP compatibility
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      ERL_FLAGS: '+S 2:2 +SDcpu 1 +SDio 1'
+      MAKEFLAGS: '-j2'
+      ASDF_CONCURRENCY: '2'
+      KERL_CONFIGURE_OPTIONS: '--without-javac --without-wx --without-odbc'
+      KERL_BUILD_DOCS: 'no'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20.19.2'
+
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            build-essential autoconf m4 libncurses-dev libssl-dev unzip
+
+      - name: Set up asdf
+        uses: asdf-vm/actions/setup@b7bcd026f18772e44fe1026d729e1611cc435d47 # v4.0.1
+        with:
+          asdf_version: '0.19.0'
+
+      - name: Cache source-language toolchains
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.asdf/installs
+            ~/.asdf/plugins
+          key: ${{ runner.os }}-${{ runner.arch }}-asdf-0.19.0-${{ hashFiles('.tool-versions', '.github/workflows/ci.yml') }}
+
+      - name: Install pinned source-language toolchains
+        run: |
+          if ! asdf plugin list | grep -qx erlang; then
+            asdf plugin add erlang https://github.com/asdf-vm/asdf-erlang.git
+          fi
+          if ! asdf plugin list | grep -qx elixir; then
+            asdf plugin add elixir https://github.com/asdf-vm/asdf-elixir.git
+          fi
+          if ! asdf plugin list | grep -qx gleam; then
+            asdf plugin add gleam https://github.com/vic/asdf-gleam.git
+          fi
+          asdf install
+          asdf reshim
+          asdf current
+
+      - name: Install pinned Lean toolchain
+        run: |
+          installer_dir="$(mktemp -d)"
+          curl --fail --location --retry 3 \
+            https://github.com/leanprover/elan/releases/download/v4.2.4/elan-x86_64-unknown-linux-gnu.tar.gz \
+            --output "$installer_dir/elan.tar.gz"
+          tar -xzf "$installer_dir/elan.tar.gz" -C "$installer_dir"
+          "$installer_dir/elan-init" -y --no-modify-path --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          "$HOME/.elan/bin/elan" toolchain install "$(tr -d '\r\n' < lean-toolchain)"
+
+      # Build separately so a cold build is not subject to the suite's per-stage timeout.
+      # Do not cache Lean build outputs: every CI run kernel-checks the current sources.
+      - name: Build and check proofs serially
+        run: node tools/build.mjs
+
+      - name: Run complete verification suite
+        run: node tools/check_all.mjs
+
+      - name: Check retained artifact reproducibility
+        run: git diff --exit-code
