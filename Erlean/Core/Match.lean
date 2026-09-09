@@ -108,10 +108,11 @@ theorem matchPattern_keys (pattern : Pattern) (value : Value) (env : Env)
   | .cons _ _, .integer _ | .cons _ _, .atom _ | .cons _ _, .nil
   | .cons _ _, .tuple _ | .cons _ _, .bitstring _ | .cons _ _, .function _ _ _
   | .cons _ _, .closure _ _ _ _
+  | .cons _ _, .exceptionInfo _
   | .tuple _, .integer _ | .tuple _, .atom _ | .tuple _, .nil
   | .tuple _, .cons _ _ | .tuple _, .bitstring _ | .tuple _, .function _ _ _ =>
       simp [matchPattern] at h
-  | .tuple _, .closure _ _ _ _ => simp [matchPattern] at h
+  | .tuple _, .closure _ _ _ _ | .tuple _, .exceptionInfo _ => simp [matchPattern] at h
 termination_by sizeOf pattern
 
 theorem matchPatterns_keys (patterns : List Pattern) (values : Values) (env : Env)

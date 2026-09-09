@@ -85,6 +85,28 @@ const languageCases = [
   ['prepend', [tuple([integer(1)]), list([atom('tail')])]],
   ['prepend', [integer(1), atom('improper')]],
 ];
+const higherOrderCases = [nil, list([integer(1), atom('two'), tuple([nil])]),
+  list([integer(1)], atom('improper'))];
+for (const value of higherOrderCases) differential(
+  'tests/fixtures/erlang/higher_order/core.json', 'tests/fixtures/erlang/higher_order.erl',
+  'map_identity', [value]);
+const exceptionCases = [
+  ...['normal', 'throw', 'error', 'exit'].map(kind => ['handle', [atom(kind), tuple([integer(42)])]]),
+  ['try_of', [tuple([atom('ok'), integer(7)])]],
+  ['try_of', [atom('bad')]],
+  ['nested', [integer(9)]],
+  ['after_success', [integer(9)]],
+  ['after_failure', [atom('original')]],
+  ['after_override', [atom('replacement')]],
+  ['guard_error', [nil]],
+  ['guard_error', [list([atom('true')])]],
+  ['guard_error', [list([atom('false')])]],
+  ['guard_error', [atom('bad')]],
+  ['catch_throw', [tuple([integer(8)])]],
+  ['catch_exit', [tuple([integer(8)])]],
+];
+for (const [name, values] of exceptionCases) differential(
+  'tests/fixtures/erlang/exceptions/core.json', 'tests/fixtures/erlang/exceptions.erl', name, values);
 for (const [language, compiled] of [
   ['elixir', 'tests/fixtures/elixir/identity/module.beam'],
   ['gleam', 'tests/fixtures/gleam/identity/generated/_gleam_artefacts/gleam_identity.erl'],
@@ -94,9 +116,23 @@ for (const [language, compiled] of [
 }
 
 const unsupported = run(executable, ['run', artifact, 'module_info', '[]']);
+for (const value of [integer(42), tuple([atom('linked'), nil])]) {
+  const args = JSON.stringify([value]);
+  const lean = run(executable, ['run-linked', 'modular_client', 'relay', args,
+    'tests/fixtures/erlang/modular_client/core.json', 'tests/fixtures/erlang/identity/core.json']);
+  const otp = run('asdf', ['exec', 'escript', 'tests/semantics/oracle.escript',
+    'tests/fixtures/erlang/modular_client.erl', 'relay', args, 'tests/fixtures/erlang/identity.erl']);
+  assert.equal(lean.status, 0, lean.stderr);
+  assert.equal(otp.status, 0, otp.stderr);
+  assert.deepEqual(JSON.parse(lean.stdout), JSON.parse(otp.stdout));
+}
+const duplicates = run(executable, ['run-linked', 'identity', 'identity', '[]',
+  'tests/fixtures/erlang/identity/core.json', 'tests/fixtures/erlang/identity/core.json']);
+assert.equal(duplicates.status, 1);
+assert.match(duplicates.stderr, /unique names/);
 assert.equal(unsupported.status, 1, 'Unsupported runtime operation must fail');
 assert.match(unsupported.stderr, /unsupported.*get_module_info/s);
 const exhausted = run(executable, ['run', artifact, 'loop', '[]', '50']);
 assert.equal(exhausted.status, 2, 'Fuel exhaustion has its own exit status');
 assert.match(exhausted.stderr, /Fuel exhausted/);
-console.log(`Sequential checks passed: ${cases.length + closureCases.length + 2 * languageCases.length} OTP 29.0.6 differential cases across Erlang, Elixir, and Gleam; unsupported runtime fault; fuel exhaustion.`);
+console.log(`Sequential checks passed: ${cases.length + closureCases.length + higherOrderCases.length + exceptionCases.length + 2 * languageCases.length + 2} OTP 29.0.6 differential cases across Erlang, Elixir, and Gleam; unsupported runtime fault; fuel exhaustion.`);

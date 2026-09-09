@@ -19,6 +19,9 @@ const fixtures = [
   'tests/fixtures/erlang/identity',
   'tests/fixtures/erlang/sequential',
   'tests/fixtures/erlang/closures',
+  'tests/fixtures/erlang/higher_order',
+  'tests/fixtures/erlang/exceptions',
+  'tests/fixtures/erlang/modular_client',
   'tests/fixtures/elixir/identity',
   'tests/fixtures/gleam/identity',
 ];
@@ -30,6 +33,7 @@ run('OTP extraction and lossless transport', 'node', ['tools/check_export.mjs'])
 // This also regenerates the ignored Elixir BEAM before validating its manifest hash.
 run('Elixir/Gleam compiler adapters and reproducibility', 'node', ['tools/check_languages.mjs']);
 run('Lean machine regression checks', 'lake', ['env', 'lean', '-j1', '-M2048', '--run', 'tests/semantics/Regression.lean']);
+run('exception and observation boundary checks', 'lake', ['env', 'lean', '-j1', '-M2048', '--run', 'tests/semantics/ExceptionChecks.lean']);
 const axioms = run('kernel theorem axiom audit', 'lake',
   ['env', 'lean', '-j1', '-M2048', 'tests/semantics/Axioms.lean']);
 assert.doesNotMatch(axioms, /sorryAx|ofReduceBool|native_decide|Lean\.ofReduce/);
@@ -61,5 +65,11 @@ for (const [language, declaration, file] of [
 const sequential = run('recursive proof artifact correspondence', '.lake/build/bin/erlean',
   ['emit', 'tests/fixtures/erlang/sequential/core.json', 'importedSequentialModule'], true);
 assert.equal(sequential, readFileSync('Erlean/Examples/ImportedSequential.lean', 'utf8'));
+const higherOrder = run('higher-order proof artifact correspondence', '.lake/build/bin/erlean',
+  ['emit', 'tests/fixtures/erlang/higher_order/core.json', 'importedHigherOrderModule'], true);
+assert.equal(higherOrder, readFileSync('Erlean/Examples/ImportedHigherOrder.lean', 'utf8'));
+const modular = run('modular proof artifact correspondence', '.lake/build/bin/erlean',
+  ['emit', 'tests/fixtures/erlang/modular_client/core.json', 'importedModularClient'], true);
+assert.equal(modular, readFileSync('Erlean/Examples/ImportedModularClient.lean', 'utf8'));
 console.log('All bounded checks passed, including kernel-checked identity contract and artifact provenance.');
 console.log('Differential results are compatibility evidence, not a proof of equivalence with OTP.');

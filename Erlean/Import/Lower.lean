@@ -171,6 +171,16 @@ private def lowerExprM : Nat → NameScope → Term → LowerM Expr
       let names ← (← properList vars).mapM (fun x => do pure (← variableName x))
       let (ids, inner) ← bind scope names
       return .letE ids (← lowerExprM fuel scope argument) (← lowerExprM fuel inner body)
+    | .tuple [.atom "c_try", _, argument, vars, body, evars, handler] =>
+      let names ← (← properList vars).mapM (fun x => do pure (← variableName x))
+      let exceptionNames ← (← properList evars).mapM (fun x => do pure (← variableName x))
+      unless exceptionNames.length == 2 || exceptionNames.length == 3 do
+        throw "Core try requires two or three exception binders"
+      let (ids, inner) ← bind scope names
+      let (exceptionIds, handlerScope) ← bind scope exceptionNames
+      return .tryE (← lowerExprM fuel scope argument) ids
+        (← lowerExprM fuel inner body) exceptionIds (← lowerExprM fuel handlerScope handler)
+    | .tuple [.atom "c_catch", _, body] => return .catchE (← lowerExprM fuel scope body)
     | .tuple [.atom "c_call", _, mod, fn, args] =>
       return .call (← lowerExprM fuel scope mod) (← lowerExprM fuel scope fn)
         (← (← properList args).mapM (lowerExprM fuel scope))
@@ -190,7 +200,7 @@ private def lowerExprM : Nat → NameScope → Term → LowerM Expr
     | .tuple [.atom "c_primop", _, name, args] =>
       let name ← atom (← literal name)
       let args ← properList args
-      if name == "match_fail" && args.length == 1 then
+      if (name == "match_fail" && args.length == 1) || (name == "raise" && args.length == 2) then
         return .primop name (← args.mapM (lowerExprM fuel scope))
       throw s!"Unsupported primop: {name}/{args.length}"
     | _ => throw s!"Unsupported or malformed Core construct: {tagOf term}"

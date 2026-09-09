@@ -1,0 +1,1 @@
+{"calls":{"erlang:get_module_info/1":1,"erlang:get_module_info/2":1,"identity:identity/1":1},"constructs":{"call":3,"case":3,"clause":6,"fun":3,"literal":64,"module":1,"primop":3,"tuple":2,"values":1,"var":18},"dynamic_calls":0,"primops":{"match_fail":3}}

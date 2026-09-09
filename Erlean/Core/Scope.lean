@@ -27,6 +27,12 @@ def scopeCheck (scope : List VarId) (expr : Expr) : Bool :=
       let ids := bindings.map Prod.fst
       freshBinders scope ids && scopeCheck (ids ++ scope) body
   | .var id => scope.contains id
+  | .tryE argument binders body exceptionBinders handler =>
+      freshBinders scope binders && freshBinders scope exceptionBinders &&
+        (exceptionBinders.length == 2 || exceptionBinders.length == 3) &&
+        scopeCheck scope argument && scopeCheck (binders ++ scope) body &&
+        scopeCheck (exceptionBinders ++ scope) handler
+  | .catchE body => scopeCheck scope body
   | .values elements | .tuple elements => scopeCheckList scope elements
   | .letE binders argument body =>
       freshBinders scope binders && scopeCheck scope argument &&
@@ -110,6 +116,10 @@ def closureRefsCheck (code : List ClosureDef) (scope : List VarId) (expr : Expr)
       | some defn => defn.recursiveBindings == bindings && defn.outerScope.all scope.contains) &&
       closureRefsCheck code (bindings.map Prod.fst ++ scope) body
   | .values xs | .tuple xs => closureRefsList code scope xs
+  | .tryE argument binders body exceptionBinders handler =>
+    closureRefsCheck code scope argument && closureRefsCheck code (binders ++ scope) body &&
+      closureRefsCheck code (exceptionBinders ++ scope) handler
+  | .catchE body => closureRefsCheck code scope body
   | .letE ids arg body => closureRefsCheck code scope arg && closureRefsCheck code (ids ++ scope) body
   | .seq first second | .cons first second =>
     closureRefsCheck code scope first && closureRefsCheck code scope second

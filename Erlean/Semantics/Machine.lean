@@ -1,5 +1,6 @@
 import Erlean.Core.Syntax
 import Erlean.Core.Match
+import Erlean.Core.PatternObservation
 import Erlean.Semantics.Execution
 
 namespace Erlean.Semantics
@@ -9,6 +10,17 @@ open Core
 inductive ExceptionClass where
   | error | exit | throw
   deriving Repr, BEq, DecidableEq
+
+def ExceptionClass.name : ExceptionClass → String
+  | .error => "error"
+  | .exit => "exit"
+  | .throw => "throw"
+
+def ExceptionClass.ofName : String → Option ExceptionClass
+  | "error" => some .error
+  | "exit" => some .exit
+  | "throw" => some .throw
+  | _ => none
 
 /-- The initial profile reports exception class and reason, without stack inspection. -/
 structure Exception where
@@ -44,6 +56,9 @@ inductive Frame where
   | select (context : Context) (clauses : List Clause)
   | guard (context : Context) (matched : Env) (values : Values)
       (body : Expr) (rest : List Clause)
+  | tryFrame (context : Context) (binders : List VarId) (body : Expr)
+      (exceptionBinders : List VarId) (handler : Expr)
+  | catchFrame (context : Context)
   deriving Repr, BEq
 
 inductive Control where
@@ -79,10 +94,14 @@ def builtin (state : LocalState) (name : String) (args : Values) :
   let ret (value : Value) := nextControl state (.ret [value])
   let badarg := raiseError state (.atom "badarg")
   let badarith := raiseError state (.atom "badarith")
-  match name, args with
+  if !Value.publicList args then unsupported "BIF observation of opaque exception information"
+  else match name, args with
   | "+", [.integer a, .integer b] => ret (.integer (a + b))
   | "-", [.integer a, .integer b] => ret (.integer (a - b))
   | "*", [.integer a, .integer b] => ret (.integer (a * b))
+  | "=:=", [a, b] =>
+    if a.exactComparable && b.exactComparable then ret (boolean (a == b))
+    else unsupported "Exact equality involving function identity or exception information"
   | "+", [_, _] | "-", [_, _] | "*", [_, _] => badarith
   | "is_integer", [v] => ret (boolean (match v with | .integer _ => true | _ => false))
   | "is_atom", [v] => ret (boolean (match v with | .atom _ => true | _ => false))
@@ -165,6 +184,11 @@ def finishCollect (world : CodeWorld) (state : LocalState) (action : Collect)
   | .primop "match_fail", [.tuple (.atom "function_clause" :: _)] =>
     raiseError state (.atom "function_clause")
   | .primop "match_fail", [reason] => raiseError state reason
+  | .primop "raise", [.exceptionInfo kind, reason] =>
+    match ExceptionClass.ofName kind with
+    | some cls => nextControl state (.raise ⟨cls, reason⟩)
+    | none => invalid "Unknown class in opaque exception information"
+  | .primop "raise", _ => invalid "Core raise requires opaque exception information and reason"
   | .primop name, _ => unsupported s!"primop {name}/{values.length}"
   | _, _ => invalid "Malformed constructor or application arity"
 
@@ -208,6 +232,15 @@ def stepLocal (world : CodeWorld) (state : LocalState) : Transition LocalState O
     | .letE binders argument body => .next { state with
         control := .eval argument
         stack := .bind state.context binders body :: state.stack }
+    | .tryE argument binders body exceptionBinders handler =>
+      if exceptionBinders.length == 2 || exceptionBinders.length == 3 then
+        .next { state with
+          control := .eval argument
+          stack := .tryFrame state.context binders body exceptionBinders handler :: state.stack }
+      else invalid "Core try exception binding arity mismatch"
+    | .catchE body => .next { state with
+        control := .eval body
+        stack := .catchFrame state.context :: state.stack }
     | .seq first second => .next { state with
         control := .eval first
         stack := .seq state.context second :: state.stack }
@@ -237,6 +270,16 @@ def stepLocal (world : CodeWorld) (state : LocalState) : Transition LocalState O
             stack := stack }
         else invalid "Core let binding arity mismatch"
       | .seq context body => .next { control := .eval body, context, stack }
+      | .tryFrame context binders body _ _ =>
+        if binders.length == values.length then
+          .next {
+            control := .eval body
+            context := { context with env := binders.zip values ++ context.env }
+            stack := stack }
+        else invalid "Core try normal binding arity mismatch"
+      | .catchFrame context =>
+        if values.length == 1 then .next { control := .ret values, context, stack }
+        else invalid "Core catch requires a single result"
       | .select context clauses => .next { control := .select values clauses, context, stack }
       | .guard context matched scrutinee body rest =>
         if values == [.atom "true"] then
@@ -249,7 +292,9 @@ def stepLocal (world : CodeWorld) (state : LocalState) : Transition LocalState O
     match clauses with
     | [] => invalid "Core case exhausted without a compiler-generated failure clause"
     | (patterns, guard, body) :: rest =>
-      match Core.matchPatterns patterns values with
+      if !Core.patternsObservationAllowed patterns values then
+        unsupported "Pattern observation of opaque exception information"
+      else match Core.matchPatterns patterns values with
       | none => nextControl state (.select values rest)
       | some matched => .next {
           control := .eval guard
@@ -258,6 +303,21 @@ def stepLocal (world : CodeWorld) (state : LocalState) : Transition LocalState O
   | .raise exception =>
     match state.stack with
     | [] => .halt (.raised exception)
+    | .tryFrame context _ _ binders handler :: stack =>
+      let values := if binders.length == 2 then
+          [.atom exception.kind.name, exception.reason]
+        else [.atom exception.kind.name, exception.reason, .exceptionInfo exception.kind.name]
+      if binders.length == 2 || binders.length == 3 then
+        .next {
+          control := .eval handler
+          context := { context with env := binders.zip values ++ context.env }
+          stack := stack }
+      else invalid "Core try exception binding arity mismatch"
+    | .catchFrame context :: stack =>
+      match exception.kind with
+      | .throw => .next { control := .ret [exception.reason], context, stack }
+      | .exit => .next { control := .ret [.tuple [.atom "EXIT", exception.reason]], context, stack }
+      | .error => unsupported "Old catch of error requires observable stacktrace semantics"
     | .guard context _ values _ rest :: stack =>
       if exception.kind == .error then
         .next { control := .select values rest, context, stack }

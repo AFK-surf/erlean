@@ -20,13 +20,13 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current checkpoint: finite closures and recursive groups (2026-09-09)
+### Current checkpoint: higher-order, exception, and modular contracts (2026-09-09)
 
 | Milestone | Status | Evidence / remaining work |
 | --- | --- | --- |
 | M0: reproducible input | Complete for the fixture profile | Reproducible real imports from all three languages, manifests, inventories, and rejection diagnostics pass. |
-| M1: sequential verification | In progress | Imported reversal proved; closures and letrec execute; higher-order map contract, handlers, codec, and full preservation remain open. |
-| M2: modular proofs | Not started | Depends on linked execution and function contracts. |
+| M1: sequential verification | In progress | Imported reversal and higher-order identity-map proved; closures, letrec, and handlers execute; codec and full preservation remain open. |
+| M2: modular proofs | Complete for tail delegation | Real imported client reuses a dependency contract in an explicit linked world; arbitrary continuation lifting remains future work. |
 | M3: actor verification | Not started | Depends on sequential and runtime request interfaces. |
 
 The first end-to-end success criterion is met for small identity modules from all
@@ -80,6 +80,17 @@ serialized through the primary agent.
 - 2026-09-09: Reconstruct recursive bindings on application without cyclic values.
   Capture all ambient lexical bindings initially. Structural closure comparison is
   only internal machinery; OTP-observable fun equality/introspection remain unsupported.
+- 2026-09-09: Model Core try/catch and raise with class/reason and opaque internal
+  exception information. Protect tokens from BIF observation, pattern inspection,
+  and public serialization. Legacy catch of errors and stacktrace construction
+  remain unsupported; legacy throw/exit catch is supported. Model faults bypass
+  language handlers. Compiler-generated after cleanup uses ordinary continuations.
+- 2026-09-09: Separate internal `TotalCorrect` from `ObservableTotalCorrect`.
+  Public contracts additionally require supported observation at the boundary;
+  arbitrary internal Value quantification must not imply public token transport.
+- 2026-09-09: Reuse dependency contracts through checked common-entry prefixes in
+  the same linked code world. This supports tail delegation without assuming
+  that extending or replacing a world preserves an earlier theorem.
 
 ### Validation and limitations
 
@@ -108,13 +119,21 @@ serialized through the primary agent.
   provenance for the Elixir and Gleam artifacts.
 - Kernel-checked generic execution results: step determinism, finite evaluation
   soundness/completeness, budget splitting, and stability under additional fuel.
-- Fifty differential cases pass against OTP 29.0.6, including recursive list
+- Seventy-one differential cases pass against OTP 29.0.6, including recursive list
   functions, arbitrary-precision arithmetic, exceptions, operand order, context
   restoration, and all three source-language identities and constructors.
 - Closure cases cover capture, nested captures, returned closures used by callers,
   named recursive sum, and recursive map capturing a second closure. The importer
   rejects incomplete code tables, and the module checker validates capture scopes
-  and recursive code references. The higher-order map contract is still pending.
+  and recursive code references. `map_identity_totalCorrect` proves the actual
+  imported higher-order callback example for every finite list of modeled values.
+  Its inductive return lemma accepts arbitrary continuation stacks.
+- `modular_relay_totalCorrect` verifies the emitted client and identity dependency
+  together. The client theorem applies the dependency contract without unfolding
+  its body. CLI `run-linked` executes explicit artifact sets and rejects duplicate
+  module names. Kernel axiom audits cover both new contracts.
+- Exception regressions cover handler frame removal, rethrow, lexical context,
+  opaque-token observation, malformed arities, and unsupported fault propagation.
 - `Erlean.Core.Environment` proves lookup/key correspondence, environment extension,
   parameter-zip coverage under arity agreement, and successful-pattern coverage.
   These are preservation prerequisites, not a full machine preservation theorem.
@@ -125,7 +144,7 @@ serialized through the primary agent.
   not complete Core arity validation or guard-grammar validity.
 - Machine support includes multi-values, binding, sequencing, construction,
   named calls, cases/guards, selected integer BIFs, and `match_fail/1`. Exceptions
-  expose class/reason only; stack inspection and handlers are not yet implemented.
+  expose class/reason only; handlers are implemented but stack inspection is not.
 - Unknown BIFs, unlinked dependencies, and other unsupported operations report
   model faults. Generated `module_info` calls remain visible obligations.
 - No full OTP compatibility, actor execution, or completed M1
@@ -133,12 +152,14 @@ serialized through the primary agent.
 
 ### Next work
 
-1. Prove a higher-order map contract using the now-executable closure support.
-2. Strengthen accepted-Core invariants and prove local state preservation; develop
-   environment coverage lemmas alongside closure integration.
-3. Generalize frame and call proof rules for dependency-contract reuse.
-4. Extend exception handlers and the codec-required map/bitstring operations.
-5. Progress to M2 dependency-contract reuse before starting M3 actor semantics.
+1. Integrate fixed unsigned-byte construction/matching and prove an imported codec
+   round trip for inputs from 0 through 255. Reject other segment profiles.
+2. Strengthen accepted-Core invariants and prove local state preservation; existing
+   environment coverage lemmas are only prerequisites.
+3. Implement explicit actor runtime requests, signal delivery, selective receive,
+   and deadlines; then extend monitors/links and prove a protocol invariant.
+4. Generalize tail-delegation rules to arbitrary continuations when a client
+   example requires them; retain world compatibility obligations explicitly.
 
 ### Commit checkpoints
 
@@ -150,9 +171,11 @@ serialized through the primary agent.
   literals, alias patterns, and resource-bounded serial verification; pushed.
 - `cbbab32`: imported arbitrary-list reversal and reusable finite-prefix composition
   rules; full bounded suite passed and commit was pushed.
-- Current checkpoint: finite captured closures, recursive groups, validated code
-  references, environment lemmas, and 50 differential cases. The carrying commit
-  records its revision.
+- `1f1d2cf`: finite closures, recursive groups, code references, environment lemmas,
+  and 50 differential cases; full bounded suite passed and commit was pushed.
+- Current checkpoint: higher-order map theorem, exception handling and observation
+  checks, linked dependency-contract reuse, and 71 differential cases. The full
+  bounded suite passed; the carrying commit records its revision.
 
 ## 1. Purpose and success criteria
 

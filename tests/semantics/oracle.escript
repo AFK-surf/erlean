@@ -2,10 +2,14 @@
 %%! -noshell
 -mode(compile).
 
-main([Source, Function, Arguments]) ->
+main([Source, Function, Arguments | Dependencies]) ->
     VersionFile = filename:join([code:root_dir(), "releases", "29", "OTP_VERSION"]),
     {ok, VersionBytes} = file:read_file(VersionFile),
     <<"29.0.6">> = string:trim(VersionBytes),
+    lists:foreach(fun(Dependency) ->
+        {Name, Code} = load_artifact(Dependency),
+        {module, Name} = code:load_binary(Name, Dependency, Code)
+    end, Dependencies),
     {Module, Beam} = load_artifact(Source),
     {module, Module} = code:load_binary(Module, Source, Beam),
     Args = [decode(X) || X <- json:decode(list_to_binary(Arguments))],
