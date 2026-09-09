@@ -43,6 +43,18 @@ this library checkpoint in Cue and check its universal compiled-controller proof
 The Cue plan and production adapter obligations live in that repository at
 `docs/salix/agent-loop-kernel-verification.md`.
 
+Cue's differential gate needs repeated calls against one large imported module.
+The generic `run-batch` CLI imports once and evaluates independent cases with a
+per-case fuel budget. It publishes one ordered result array only after every
+case succeeds. Raised Erlang exceptions remain observable results. Model faults,
+malformed cases, and exhaustion fail without partial standard output. This is a
+runner optimization, not a semantic extension. The full serialized suite passed,
+including batch ordering, raised outcomes, malformed input, late model faults,
+and per-case exhaustion with atomic output. The original single-call CLI checks
+and all artifact, differential, and theorem checks still pass. Cue's Round,
+Dependency, Ownership, and Policy modules have passed kernel checking. Next, pin
+this runner checkpoint there and complete its production integration gate.
+
 ### Previous checkpoint: GitHub Actions verification (2026-09-09)
 
 GitHub Actions now runs a single Ubuntu 24.04 job on pull requests, pushes to

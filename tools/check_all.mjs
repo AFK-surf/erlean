@@ -43,6 +43,7 @@ const axioms = run('kernel theorem axiom audit', 'lake',
   ['env', 'lean', '-j1', '-M2048', 'tests/semantics/Axioms.lean']);
 assert.doesNotMatch(axioms, /sorryAx|ofReduceBool|native_decide|Lean\.ofReduce/);
 run('OTP differential checks and explicit model failures', 'node', ['tools/check_semantics.mjs']);
+run('batch execution and atomic failure reporting', 'node', ['tools/check_batch.mjs']);
 run('OTP actor differential scenarios', 'node', ['tools/check_actors.mjs']);
 run('Dijkstra OTP and independent shortest-path checks', 'node', ['tools/check_dijkstra.mjs']);
 

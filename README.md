@@ -95,6 +95,12 @@ for a term does not imply executable support.
 An exhausted budget is inconclusive, not proof of divergence. Read the outcome:
 a modeled Erlang exception is distinct from an unsupported semantic operation.
 
+For repeated calls, use `run-batch ARTIFACT CASES_JSON_FILE [FUEL]`. The file holds
+an array of objects with `function` and `arguments` fields. The command imports
+the module once and returns an ordered JSON array using the same outcome schema.
+Fuel applies to each call. A malformed case, model fault, or exhausted call fails
+the batch without partial output.
+
 ### 3. Use a function contract in Lean
 
 A contract states which inputs are allowed and what the function must return.

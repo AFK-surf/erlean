@@ -53,37 +53,65 @@ private def inspect (path : String) : IO Unit := do
     ("constructs", toJson report.constructs),
     ("call_obligations", toJson report.callObligations)]).compress
 
-private def executeWorld (world : CodeWorld) (moduleName name args : String) (fuel : Nat) : IO UInt32 := do
-  let json ← checked (Lean.Json.parse args)
-  let raw ← checked json.getArr?
-  let values ← raw.toList.mapM fun j => checked (decodeTerm 4096 j >>= lowerValue 4096)
+private def decodeArguments (json : Lean.Json) : Except String Values := do
+  let raw ← json.getArr?
+  raw.toList.mapM fun j => decodeTerm 4096 j >>= lowerValue 4096
+
+/-- Evaluate without printing, so batch failure cannot leave a partial result. -/
+private def evaluateWorld (world : CodeWorld) (moduleName name : String)
+    (values : Values) (fuel : Nat) : IO (Except (UInt32 × String) Lean.Json) := do
   let result := match runLocal fuel world (initialCall moduleName name values) with
     | .halted outcome => RunResult.halted (observeOutcome outcome)
     | .exhausted state => .exhausted state
   match result with
   | .halted (.returned values) =>
     let encoded ← checked (values.mapM encodeValue)
-    IO.println (Lean.Json.mkObj [("status", string "returned"),
-      ("values", .arr encoded.toArray)]).compress
-    return 0
+    return .ok (Lean.Json.mkObj [("status", string "returned"),
+      ("values", .arr encoded.toArray)])
   | .halted (.raised exception) =>
     let kind := match exception.kind with
       | .error => "error" | .exit => "exit" | .throw => "throw"
     let reason ← checked (encodeValue exception.reason)
-    IO.println (Lean.Json.mkObj [("status", string "raised"),
-      ("class", string kind), ("reason", reason)]).compress
-    return 0
+    return .ok (Lean.Json.mkObj [("status", string "raised"),
+      ("class", string kind), ("reason", reason)])
   | .halted (.fault fault) =>
-    IO.eprintln s!"Model fault: {repr fault}"
-    return 1
+    return .error (1, s!"Model fault: {repr fault}")
   | .exhausted _ =>
-    IO.eprintln s!"Fuel exhausted after {fuel} steps; this does not establish divergence."
-    return 2
+    return .error (2, s!"Fuel exhausted after {fuel} steps; this does not establish divergence.")
+
+private def executeWorld (world : CodeWorld) (moduleName name args : String) (fuel : Nat) : IO UInt32 := do
+  let values ← checked (Lean.Json.parse args >>= decodeArguments)
+  match ← evaluateWorld world moduleName name values fuel with
+  | .ok result => IO.println result.compress; return 0
+  | .error (code, message) => IO.eprintln message; return code
 
 private def execute (path name args : String) (fuel : Nat) : IO UInt32 := do
   let report ← load path
   complete report
   executeWorld [report.module] report.module.name name args fuel
+
+private def decodeBatchCase (json : Lean.Json) : Except String (String × Values) := do
+  let name ← (← json.getObjVal? "function").getStr?
+  let values ← decodeArguments (← json.getObjVal? "arguments")
+  return (name, values)
+
+/-- Import once, execute independent cases, and publish only a complete array.
+    Fuel is a per-case interpreter budget, not a bound shared by the batch. -/
+private def executeBatch (path casesPath : String) (fuel : Nat) : IO UInt32 := do
+  let report ← load path
+  complete report
+  let json ← checked (Lean.Json.parse (← IO.FS.readFile casesPath))
+  let raw ← checked json.getArr?
+  let cases ← checked (raw.toList.mapM decodeBatchCase)
+  let mut results : Array Lean.Json := #[]
+  for ((name, values), index) in cases.zipIdx do
+    match ← evaluateWorld [report.module] report.module.name name values fuel with
+    | .ok result => results := results.push result
+    | .error (code, message) =>
+      IO.eprintln s!"Batch case {index} ({name}): {message}"
+      return code
+  IO.println (Lean.Json.arr results).compress
+  return 0
 
 private def executeLinked (paths : List String) (moduleName name args : String) : IO UInt32 := do
   let reports ← paths.mapM load
@@ -172,13 +200,17 @@ def main (args : List String) : IO UInt32 := do
     | ["run", path, name, values, fuel] =>
       let some fuel := fuel.toNat? | throw (IO.userError "Fuel must be a natural number")
       execute path name values fuel
+    | ["run-batch", path, casesPath] => executeBatch path casesPath 100000
+    | ["run-batch", path, casesPath, fuel] =>
+      let some fuel := fuel.toNat? | throw (IO.userError "Fuel must be a natural number")
+      executeBatch path casesPath fuel
     | "run-linked" :: moduleName :: name :: values :: paths =>
       executeLinked paths moduleName name values
     | ["actor-run", path, name, values] => actorExecute path name values
     | ["actor-run", path, name, values, trace] => actorExecute path name values (some trace)
     | ["actor-replay", path, name, values, trace] => actorExecute path name values none (some trace)
     | _ =>
-      IO.eprintln "Usage: erlean inspect ARTIFACT | emit ARTIFACT [DECLARATION] | run ARTIFACT FUNCTION JSON_ARGUMENTS [FUEL] | run-linked MODULE FUNCTION JSON_ARGUMENTS ARTIFACTS... | actor-run ARTIFACT FUNCTION JSON_ARGUMENTS [TRACE_FILE] | actor-replay ARTIFACT FUNCTION JSON_ARGUMENTS TRACE_FILE"
+      IO.eprintln "Usage: erlean inspect ARTIFACT | emit ARTIFACT [DECLARATION] | run ARTIFACT FUNCTION JSON_ARGUMENTS [FUEL] | run-batch ARTIFACT CASES_JSON_FILE [FUEL] | run-linked MODULE FUNCTION JSON_ARGUMENTS ARTIFACTS... | actor-run ARTIFACT FUNCTION JSON_ARGUMENTS [TRACE_FILE] | actor-replay ARTIFACT FUNCTION JSON_ARGUMENTS TRACE_FILE"
       return 2
   catch error =>
     IO.eprintln s!"erlean: {error}"
