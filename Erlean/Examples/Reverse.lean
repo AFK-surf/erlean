@@ -30,7 +30,7 @@ theorem reverseWorker_nil (acc : Value) :
       .halted (.returned [acc]) := by
   simp [runLocal, run, reverseWorkerState, reverseWorkerBody, stepLocal,
     nextControl, startCollect, finishCollect, Env.lookup, patternsObservationAllowed, patternObservationAllowed,
-    literalObservationAllowed, literalListObservationAllowed, matchPatterns, matchPattern,
+    literalObservationAllowed, matchPatterns, matchPattern,
     BEq.beq, List.beq, Value.equal]
 
 theorem reverseWorker_cons (head tail acc : Value) :
@@ -38,7 +38,7 @@ theorem reverseWorker_cons (head tail acc : Value) :
       .exhausted (reverseWorkerState tail (.cons head acc)) := by
   simp [runLocal, run, reverseWorkerState, reverseWorkerBody, stepLocal,
     nextControl, startCollect, finishCollect, Env.lookup, patternsObservationAllowed, patternObservationAllowed,
-    literalObservationAllowed, literalListObservationAllowed, matchPatterns, matchPattern,
+    literalObservationAllowed, matchPatterns, matchPattern,
     BEq.beq, List.beq, Value.equal, invoke, importedSequentialModule,
     lookupFunction]
 
@@ -47,7 +47,7 @@ theorem reverse_entry (xs : Value) :
       .exhausted (reverseWorkerState xs .nil) := by
   simp [runLocal, run, initialCall, reverseWorkerState, reverseWorkerBody, stepLocal,
     nextControl, startCollect, finishCollect, Env.lookup, patternsObservationAllowed, patternObservationAllowed,
-    literalObservationAllowed, literalListObservationAllowed, matchPatterns,
+    matchPatterns,
     BEq.beq, List.beq, Value.equal, invoke, importedSequentialModule, lookupFunction]
 
 /-- Induction is over source list length, not a fixed interpreter budget. -/

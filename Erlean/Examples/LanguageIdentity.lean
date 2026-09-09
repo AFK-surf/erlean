@@ -30,7 +30,7 @@ theorem elixir_identity_run (value : Value) :
   simp [runLocal, run, initialCall, stepLocal, startCollect, finishCollect,
     nextControl, invoke, lookupFunction, importedElixirModule, Env.lookup,
     patternsObservationAllowed, patternObservationAllowed,
-    literalObservationAllowed, literalListObservationAllowed, matchPatterns, BEq.beq, List.beq, Value.equal]
+    matchPatterns, BEq.beq, List.beq, Value.equal]
 
 theorem elixir_identity_totalCorrect :
     TotalCorrect [importedElixirModule] "Elixir.ErleanIdentity" "identity"

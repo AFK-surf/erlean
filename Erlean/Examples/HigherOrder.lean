@@ -33,7 +33,7 @@ theorem map_nil (original : Value) (stack : List Frame) :
         stack := stack } := by
   simp [runLocal, run, mapState, mapBody, importedHigherOrderModule, stepLocal,
     nextControl, startCollect, finishCollect, Env.lookup, patternsObservationAllowed, patternObservationAllowed,
-    literalObservationAllowed, literalListObservationAllowed, matchPatterns, matchPattern,
+    literalObservationAllowed, matchPatterns, matchPattern,
     BEq.beq, List.beq, Value.equal]
 
 theorem map_cons (original head tail : Value) (stack : List Frame) :
@@ -41,7 +41,7 @@ theorem map_cons (original head tail : Value) (stack : List Frame) :
       .exhausted (mapState original tail (mapContinuation original head tail :: stack)) := by
   simp [runLocal, run, mapState, mapBody, importedHigherOrderModule, stepLocal,
     nextControl, startCollect, finishCollect, Env.lookup, patternsObservationAllowed, patternObservationAllowed,
-    literalObservationAllowed, literalListObservationAllowed, matchPatterns, matchPattern,
+    literalObservationAllowed, matchPatterns, matchPattern,
     BEq.beq, List.beq, Value.equal, identityCallback, applyClosure, recursiveEnv,
     invoke, lookupFunction, mapContinuation, mapContinuationContext]
 
@@ -89,7 +89,7 @@ theorem map_identity_entry (xs : Value) :
       .exhausted (mapState xs xs []) := by
   simp [runLocal, run, initialCall, mapState, mapBody, importedHigherOrderModule, stepLocal,
     nextControl, startCollect, finishCollect, Env.lookup, patternsObservationAllowed, patternObservationAllowed,
-    literalObservationAllowed, literalListObservationAllowed, matchPatterns, BEq.beq,
+    matchPatterns, BEq.beq,
     List.beq, Value.equal, identityCallback, invoke, lookupFunction, makeClosureValue,
     Pure.pure, Except.pure, Bind.bind, Except.bind]
 

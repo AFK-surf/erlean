@@ -1,4 +1,5 @@
 import Erlean.Core.Scope
+import Erlean.Core.Bytes
 
 namespace Erlean.Core
 
@@ -18,6 +19,9 @@ def matchPattern (pattern : Pattern) (value : Value) : Option Env :=
       let tailEnv ← matchPattern tail rest
       pure (headEnv ++ tailEnv)
   | .tuple patterns, .tuple values => matchPatterns patterns values
+  | .bytes patterns, .bitstring bits => do
+      let values ← decodeByteValues patterns.length bits
+      matchPatterns patterns values
   | _, _ => none
 termination_by sizeOf pattern
 
@@ -105,6 +109,18 @@ theorem matchPattern_keys (pattern : Pattern) (value : Value) (env : Env)
   | .tuple patterns, .tuple values =>
       simpa [Pattern.binders] using
         matchPatterns_keys patterns values env (by simpa [matchPattern] using h)
+  | .bytes patterns, .bitstring bits =>
+      cases hd : decodeByteValues patterns.length bits with
+      | none => simp [matchPattern, hd] at h
+      | some values =>
+          simpa [Pattern.binders] using
+            matchPatterns_keys patterns values env (by simpa [matchPattern, hd] using h)
+  | .bytes _, .integer _ | .bytes _, .atom _ | .bytes _, .nil
+  | .bytes _, .cons _ _ | .bytes _, .tuple _ | .bytes _, .function _ _ _
+  | .bytes _, .closure _ _ _ _ | .bytes _, .exceptionInfo _
+  | .bytes _, .pid _ | .bytes _, .reference _
+  | .cons _ _, .pid _ | .cons _ _, .reference _
+  | .tuple _, .pid _ | .tuple _, .reference _ => simp [matchPattern] at h
   | .cons _ _, .integer _ | .cons _ _, .atom _ | .cons _ _, .nil
   | .cons _ _, .tuple _ | .cons _ _, .bitstring _ | .cons _ _, .function _ _ _
   | .cons _ _, .closure _ _ _ _

@@ -22,6 +22,9 @@ const fixtures = [
   'tests/fixtures/erlang/higher_order',
   'tests/fixtures/erlang/exceptions',
   'tests/fixtures/erlang/modular_client',
+  'tests/fixtures/erlang/byte_codec',
+  'tests/fixtures/erlang/actor_protocol',
+  'tests/fixtures/erlang/actor_lifecycle',
   'tests/fixtures/elixir/identity',
   'tests/fixtures/gleam/identity',
 ];
@@ -34,10 +37,12 @@ run('OTP extraction and lossless transport', 'node', ['tools/check_export.mjs'])
 run('Elixir/Gleam compiler adapters and reproducibility', 'node', ['tools/check_languages.mjs']);
 run('Lean machine regression checks', 'lake', ['env', 'lean', '-j1', '-M2048', '--run', 'tests/semantics/Regression.lean']);
 run('exception and observation boundary checks', 'lake', ['env', 'lean', '-j1', '-M2048', '--run', 'tests/semantics/ExceptionChecks.lean']);
+run('actor scheduling and lifecycle regressions', 'lake', ['env', 'lean', '-j1', '-M2048', '--run', 'tests/semantics/ActorChecks.lean']);
 const axioms = run('kernel theorem axiom audit', 'lake',
   ['env', 'lean', '-j1', '-M2048', 'tests/semantics/Axioms.lean']);
 assert.doesNotMatch(axioms, /sorryAx|ofReduceBool|native_decide|Lean\.ofReduce/);
 run('OTP differential checks and explicit model failures', 'node', ['tools/check_semantics.mjs']);
+run('OTP actor differential scenarios', 'node', ['tools/check_actors.mjs']);
 
 for (const directory of fixtures) {
   const manifest = JSON.parse(readFileSync(`${directory}/manifest.json`));
@@ -71,5 +76,11 @@ assert.equal(higherOrder, readFileSync('Erlean/Examples/ImportedHigherOrder.lean
 const modular = run('modular proof artifact correspondence', '.lake/build/bin/erlean',
   ['emit', 'tests/fixtures/erlang/modular_client/core.json', 'importedModularClient'], true);
 assert.equal(modular, readFileSync('Erlean/Examples/ImportedModularClient.lean', 'utf8'));
+const codec = run('codec proof artifact correspondence', '.lake/build/bin/erlean',
+  ['emit', 'tests/fixtures/erlang/byte_codec/core.json', 'importedByteCodec'], true);
+assert.equal(codec, readFileSync('Erlean/Examples/ImportedByteCodec.lean', 'utf8'));
+const actor = run('actor proof artifact correspondence', '.lake/build/bin/erlean',
+  ['emit', 'tests/fixtures/erlang/actor_protocol/core.json', 'importedActorProtocolModule'], true);
+assert.equal(actor, readFileSync('Erlean/Examples/ImportedActorProtocol.lean', 'utf8'));
 console.log('All bounded checks passed, including kernel-checked identity contract and artifact provenance.');
 console.log('Differential results are compatibility evidence, not a proof of equivalence with OTP.');

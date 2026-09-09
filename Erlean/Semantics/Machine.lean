@@ -45,7 +45,7 @@ structure Context where
   deriving Repr, BEq
 
 inductive Collect where
-  | values | tuple | cons | call | apply
+  | values | tuple | bytes | cons | call | apply
   | primop (name : String)
   deriving Repr, BEq
 
@@ -66,6 +66,8 @@ inductive Control where
   | ret (values : Values)
   | raise (exception : Exception)
   | select (values : Values) (clauses : List Clause)
+  /-- Runtime suspension consumed by the actor driver, never by the local runner. -/
+  | runtime (name : String) (arguments : Values)
   deriving Repr, BEq
 
 structure LocalState where
@@ -96,12 +98,22 @@ def builtin (state : LocalState) (name : String) (args : Values) :
   let badarith := raiseError state (.atom "badarith")
   if !Value.publicList args then unsupported "BIF observation of opaque exception information"
   else match name, args with
+  | "self", [] | "make_ref", [] | "spawn", [_, _, _]
+  | "send", [_, _] | "monitor", [_, _] | "demonitor", [_]
+  | "link", [_] | "unlink", [_] | "exit", [_, _] =>
+    nextControl state (.runtime name args)
+  | "!", [_, _] => nextControl state (.runtime "send" args)
   | "+", [.integer a, .integer b] => ret (.integer (a + b))
   | "-", [.integer a, .integer b] => ret (.integer (a - b))
   | "*", [.integer a, .integer b] => ret (.integer (a * b))
   | "=:=", [a, b] =>
     if a.exactComparable && b.exactComparable then ret (boolean (a == b))
     else unsupported "Exact equality involving function identity or exception information"
+  | "and", [.atom a, .atom b] =>
+    if (a == "true" || a == "false") && (b == "true" || b == "false") then
+      ret (boolean (a == "true" && b == "true"))
+    else badarg
+  | "and", [_, _] => badarg
   | "+", [_, _] | "-", [_, _] | "*", [_, _] => badarith
   | "is_integer", [v] => ret (boolean (match v with | .integer _ => true | _ => false))
   | "is_atom", [v] => ret (boolean (match v with | .atom _ => true | _ => false))
@@ -172,6 +184,10 @@ def finishCollect (world : CodeWorld) (state : LocalState) (action : Collect)
   match action, values with
   | .values, _ => nextControl state (.ret values)
   | .tuple, _ => nextControl state (.ret [.tuple values])
+  | .bytes, _ =>
+    match encodeByteValues values with
+    | some bits => nextControl state (.ret [.bitstring bits])
+    | none => raiseError state (.atom "badarg")
   | .cons, [head, tail] => nextControl state (.ret [.cons head tail])
   | .call, .atom mod :: .atom name :: args => invoke world state mod name args true
   | .call, _ => raiseError state (.atom "badarg")
@@ -189,6 +205,10 @@ def finishCollect (world : CodeWorld) (state : LocalState) (action : Collect)
     | some cls => nextControl state (.raise ⟨cls, reason⟩)
     | none => invalid "Unknown class in opaque exception information"
   | .primop "raise", _ => invalid "Core raise requires opaque exception information and reason"
+  | .primop "recv_peek_message", [] => nextControl state (.runtime "recv_peek_message" [])
+  | .primop "recv_next", [] => nextControl state (.runtime "recv_next" [])
+  | .primop "remove_message", [] => nextControl state (.runtime "remove_message" [])
+  | .primop "recv_wait_timeout", [timeout] => nextControl state (.runtime "recv_wait_timeout" [timeout])
   | .primop name, _ => unsupported s!"primop {name}/{values.length}"
   | _, _ => invalid "Malformed constructor or application arity"
 
@@ -203,6 +223,7 @@ def startCollect (world : CodeWorld) (state : LocalState) (action : Collect)
 /-- One total machine transition. Recursion in Core consumes machine steps. -/
 def stepLocal (world : CodeWorld) (state : LocalState) : Transition LocalState Outcome :=
   match state.control with
+  | .runtime name args => unsupported s!"Actor runtime required: {name}/{args.length}"
   | .eval expression =>
     match expression with
     | .lit value => nextControl state (.ret [value])
@@ -225,6 +246,7 @@ def stepLocal (world : CodeWorld) (state : LocalState) : Transition LocalState O
           context := { state.context with env := env ++ state.context.env } }
     | .values elements => startCollect world state .values elements
     | .tuple elements => startCollect world state .tuple elements
+    | .bytes elements => startCollect world state .bytes elements
     | .cons head tail => startCollect world state .cons [head, tail]
     | .call mod name args => startCollect world state .call (mod :: name :: args)
     | .apply function args => startCollect world state .apply (function :: args)

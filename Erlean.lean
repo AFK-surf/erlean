@@ -11,6 +11,7 @@ import Erlean.Examples.LanguageIdentity
 import Erlean.Examples.Reverse
 import Erlean.Examples.HigherOrder
 import Erlean.Examples.Modular
+import Erlean.Examples.ByteCodec
 
 /-!
 # erlean

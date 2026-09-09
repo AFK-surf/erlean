@@ -46,7 +46,28 @@ def main : IO Unit := do
   assertTrue (isOkEq (lowerBitstring 8 "Af") expected &&
     isOkEq (lowerBitstring 8 "af") expected) "canonical bitstring representation"
   expectError (lowerExpr 64 [] (record "c_primop"
-    [record "c_literal" [.atom "recv_peek_message"], .nil])) "unsupported primop"
+    [record "c_literal" [.atom "recv_marker_reserve"], .nil])) "unsupported later-stage primop"
+  let literal := fun value => record "c_literal" [value]
+  let flags := Term.list [.atom "unsigned", .atom "big"] .nil
+  let segment := fun size unit kind options => record "c_bitstr"
+    [literal (.integer 42), size, literal unit, literal kind, literal options]
+  let binary := fun segment => record "c_binary" [.list [segment] .nil]
+  assertTrue (isOkEq (lowerExpr 64 [] (binary
+    (segment (literal (.integer 8)) (.integer 1) (.atom "integer") flags)))
+    (.bytes [.lit (.integer 42)])) "fixed unsigned-byte segment"
+  for size in [literal (.integer 7), literal (.integer 16), record "c_var" [.integer 0]] do
+    expectError (lowerExpr 64 [] (binary
+      (segment size (.integer 1) (.atom "integer") flags))) "unsupported byte size"
+  for options in [Term.list [.atom "signed", .atom "big"] .nil,
+      .list [.atom "unsigned", .atom "little"] .nil,
+      .list [.atom "unsigned", .atom "native"] .nil, .nil] do
+    expectError (lowerExpr 64 [] (binary
+      (segment (literal (.integer 8)) (.integer 1) (.atom "integer") options)))
+      "unsupported byte flags"
+  expectError (lowerExpr 64 [] (binary
+    (segment (literal (.integer 8)) (.integer 8) (.atom "integer") flags))) "unsupported byte unit"
+  expectError (lowerExpr 64 [] (binary
+    (segment (literal (.integer 8)) (.integer 1) (.atom "float") flags))) "unsupported byte type"
   let var := record "c_var" [.integer 0]
   expectError (lowerExpr 64 [] (record "c_let"
     [.list [var, var] .nil, record "c_literal" [.nil], var])) "duplicate binder"

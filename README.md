@@ -8,8 +8,10 @@ The initial slice imports real modules from all three languages, proves their
 identity functions for arbitrary modeled values, proves list reversal and a
 higher-order map example, and reuses a dependency contract across linked modules.
 Captured closures, recursive groups, and class/reason exception handlers execute;
-71 OTP differential cases pass. Stacktrace inspection and actor semantics remain
-outside the validated profile.
+The byte codec has a bounded-input round-trip proof. The restricted actor runtime
+supports explicit scheduling, signal delivery, receive, monitor/link lifecycle,
+and replay. Tests include 91 sequential cases and 17 actor scenarios against OTP;
+full preservation and schedule-independent protocol proofs remain in progress.
 
 See the [design document](docs/design.md) for the architecture, trust boundary,
 verification interfaces, and implementation milestones.
@@ -34,6 +36,9 @@ an auditable Lean module literal for proofs; the exporter/importer are not verif
 compilers. See the [OTP import notes](docs/otp29-import.md) for the schema.
 `run-linked MODULE FUNCTION JSON_ARGUMENTS ARTIFACTS...` executes an explicit set
 of linked modules and rejects duplicate module names.
+`actor-run ARTIFACT FUNCTION JSON_ARGUMENTS [TRACE_FILE]` uses a bounded debugging
+scheduler; `actor-replay ARTIFACT FUNCTION JSON_ARGUMENTS TRACE_FILE` validates a
+saved JSON schedule. See the design tracker for lifecycle and timing restrictions.
 
 Implementation coverage and the next work items are tracked in the
 [design document](docs/design.md#implementation-tracker).

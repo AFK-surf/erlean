@@ -20,14 +20,14 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current checkpoint: higher-order, exception, and modular contracts (2026-09-09)
+### Current checkpoint: byte codec and replayable actor runtime (2026-09-09)
 
 | Milestone | Status | Evidence / remaining work |
 | --- | --- | --- |
 | M0: reproducible input | Complete for the fixture profile | Reproducible real imports from all three languages, manifests, inventories, and rejection diagnostics pass. |
-| M1: sequential verification | In progress | Imported reversal and higher-order identity-map proved; closures, letrec, and handlers execute; codec and full preservation remain open. |
+| M1: sequential verification | In progress | Imported reversal, higher-order identity-map, and byte codec proved; full lexical preservation remains open. |
 | M2: modular proofs | Complete for tail delegation | Real imported client reuses a dependency contract in an explicit linked world; arbitrary continuation lifting remains future work. |
-| M3: actor verification | Not started | Depends on sequential and runtime request interfaces. |
+| M3: actor verification | In progress | Explicit runtime requests, FIFO signals, selective receive, deadlines, monitor/link lifecycle, and replay execute; all-schedule protocol invariant remains open. |
 
 The first end-to-end success criterion is met for small identity modules from all
 three source languages. This is a restricted sequential slice, not completion of
@@ -68,7 +68,8 @@ serialized through the primary agent.
   tuple result; argument metadata belongs to the unmodeled stacktrace.
 - 2026-09-09: Add canonical bitstring literal values (`List Bool`) and alias
   patterns to retain Elixir's generated `__info__/1` intact. Padding must be zero;
-  bit-segment construction/matching and bitstring BIFs are still unsupported.
+  bit-segment construction/matching was deferred at that checkpoint; the later
+  fixed unsigned-byte decision extends it without enabling general bitstring BIFs.
 - 2026-09-09: Use focused simplification for the Elixir identity execution proof.
   Eager `cbv` expanded unrelated metadata and hit the heartbeat budget; focused
   rewriting checks in approximately two seconds under the same memory cap.
@@ -91,6 +92,29 @@ serialized through the primary agent.
 - 2026-09-09: Reuse dependency contracts through checked common-entry prefixes in
   the same linked code world. This supports tail delegation without assuming
   that extending or replacing a world preserves an earlier theorem.
+- 2026-09-09: Restrict executable binary segments to literal size 8, unit 1,
+  unsigned big-endian integer fields. Construction preserves the low eight bits
+  for every integer; patterns consume exactly the expected bytes, with no trailing
+  bits. Other sizes, units, types, flags, and dynamic sizes are explicitly rejected.
+  The codec needs no map operations; maps remain outside this profile.
+- 2026-09-09: Add runtime suspension to the local machine. Sequential execution
+  reports a model fault on suspended operations; the actor driver supplies effects.
+  Pids/references are fresh counters within a closed initial system, not BEAM
+  identity encodings. External injection of identities requires explicit assumptions.
+- 2026-09-09: Actor choices separate process steps, per-pair FIFO signal delivery,
+  and logical millisecond time advances. Receive uses a mailbox scan cursor and a
+  persistent deadline. A ready mailbox entry wins over timeout at a wait step;
+  this is a declared timing abstraction, not a wall-clock OTP equivalence claim.
+- 2026-09-09: Monitor/link registration and removal travel through the signal
+  layer. Immediate owner-side cancellation suppresses stale DOWN/link-exit signals;
+  already queued DOWN messages remain. Link generations prevent reactivation by
+  stale signals. Self exit/2, normal exit, kill, and synchronous local link failure
+  retain their distinct OTP 29 behaviors.
+- 2026-09-09: Keep lifecycle limitations explicit: no trap_exit, priority signals,
+  distributed/registered destinations, monitor options, exit_signal/2, or full
+  simultaneous opposite-endpoint link handshake. Observed uncaught error/throw
+  process termination requires unmodeled stacktraces and faults rather than
+  fabricating a notification reason. Any model fault stops system execution.
 
 ### Validation and limitations
 
@@ -119,7 +143,7 @@ serialized through the primary agent.
   provenance for the Elixir and Gleam artifacts.
 - Kernel-checked generic execution results: step determinism, finite evaluation
   soundness/completeness, budget splitting, and stability under additional fuel.
-- Seventy-one differential cases pass against OTP 29.0.6, including recursive list
+- Ninety-one sequential differential cases pass against OTP 29.0.6, including recursive list
   functions, arbitrary-precision arithmetic, exceptions, operand order, context
   restoration, and all three source-language identities and constructors.
 - Closure cases cover capture, nested captures, returned closures used by callers,
@@ -134,6 +158,19 @@ serialized through the primary agent.
   module names. Kernel axiom audits cover both new contracts.
 - Exception regressions cover handler frame removal, rethrow, lexical context,
   opaque-token observation, malformed arities, and unsupported fault propagation.
+- `byte_roundtrip_totalCorrect` proves the actual imported byte codec returns its
+  input for every integer in [0,256). The stronger execution theorem normalizes
+  every integer modulo 256. `byte_roundtrip_observableTotalCorrect` checks the
+  public observation boundary too. Byte conversion and all example theorem axioms
+  are audited by the full suite.
+- Seventeen actor differential scenarios compare the selected bounded scheduler
+  against isolated OTP processes. Separate regressions exercise FIFO rejection,
+  selective-receive retention, persistent timeouts, stale lifecycle signals, and
+  replay. These tests do not prove safety for arbitrary schedules or fairness.
+- `actor-run` can retain JSON choices, and `actor-replay` checks a supplied trace
+  against the same pure transition. Invalid choices are not language exceptions.
+  The default scheduler advances time only when no process/delivery can progress;
+  it is a debugging strategy, not an assumption silently imported into proofs.
 - `Erlean.Core.Environment` proves lookup/key correspondence, environment extension,
   parameter-zip coverage under arity agreement, and successful-pattern coverage.
   These are preservation prerequisites, not a full machine preservation theorem.
@@ -147,17 +184,19 @@ serialized through the primary agent.
   expose class/reason only; handlers are implemented but stack inspection is not.
 - Unknown BIFs, unlinked dependencies, and other unsupported operations report
   model faults. Generated `module_info` calls remain visible obligations.
-- No full OTP compatibility, actor execution, or completed M1
-  claim is made. State preservation and recursive-function contracts remain open.
+- No full OTP compatibility or completed M1/M3 claim is made. Full state
+  preservation and the all-schedule protocol invariant remain open; the implemented
+  recursive contracts and bounded actor evidence are scoped as listed above.
 
 ### Next work
 
-1. Integrate fixed unsigned-byte construction/matching and prove an imported codec
-   round trip for inputs from 0 through 255. Reject other segment profiles.
-2. Strengthen accepted-Core invariants and prove local state preservation; existing
-   environment coverage lemmas are only prerequisites.
-3. Implement explicit actor runtime requests, signal delivery, selective receive,
-   and deadlines; then extend monitors/links and prove a protocol invariant.
+1. Compose lexical frame/environment rules into full `stepLocal` preservation
+   under a checked code world. Pending drafts are not validated evidence.
+2. Relate actual imported server/client control states to protocol phases and
+   prove a request/reply invariant over every accepted system schedule. Replay,
+   FIFO eligibility, and isolated handler lemmas alone do not meet this criterion.
+3. State fairness/delivery and timing assumptions explicitly for any progress
+   theorem; no liveness theorem currently follows from the executable scheduler.
 4. Generalize tail-delegation rules to arbitrary continuations when a client
    example requires them; retain world compatibility obligations explicitly.
 
@@ -173,9 +212,11 @@ serialized through the primary agent.
   rules; full bounded suite passed and commit was pushed.
 - `1f1d2cf`: finite closures, recursive groups, code references, environment lemmas,
   and 50 differential cases; full bounded suite passed and commit was pushed.
-- Current checkpoint: higher-order map theorem, exception handling and observation
-  checks, linked dependency-contract reuse, and 71 differential cases. The full
-  bounded suite passed; the carrying commit records its revision.
+- `b659a78`: higher-order map, exception observation boundaries, linked dependency
+  reuse, and 71 differential cases; full suite passed and commit was pushed.
+- Current checkpoint: imported byte-codec contracts and explicit actor runtime,
+  including lifecycle signals, 91 sequential cases and 17 actor scenarios. The
+  carrying commit records the revision and validated checks.
 
 ## 1. Purpose and success criteria
 

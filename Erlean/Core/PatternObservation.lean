@@ -33,11 +33,15 @@ def patternObservationAllowed (pattern : Pattern) (value : Value) : Bool :=
   | .wild, _ | .var _, _ => true
   | .alias _ pattern, value => patternObservationAllowed pattern value
   | .lit expected, value => literalObservationAllowed expected value
-  | .cons _ _, .exceptionInfo _ | .tuple _, .exceptionInfo _ => false
+  | .cons _ _, .exceptionInfo _ | .tuple _, .exceptionInfo _ | .bytes _, .exceptionInfo _ => false
   | .cons head tail, .cons first rest =>
     patternObservationAllowed head first &&
       ((matchPattern head first).isNone || patternObservationAllowed tail rest)
   | .tuple patterns, .tuple values => patternsObservationAllowed patterns values
+  | .bytes patterns, .bitstring bits =>
+    match decodeByteValues patterns.length bits with
+    | some values => patternsObservationAllowed patterns values
+    | none => true
   | _, _ => true
 termination_by sizeOf pattern
 

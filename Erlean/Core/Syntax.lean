@@ -10,8 +10,10 @@ inductive Value where
   | nil
   | cons (head tail : Value)
   | tuple (elements : List Value)
-  /-- Canonical bits for literal transport; no bit-segment operations are implied. -/
+  /-- Canonical bits shared by literals and supported binary operations. -/
   | bitstring (bits : List Bool)
+  | pid (id : Nat)
+  | reference (id : Nat)
   | function (moduleName name : String) (arity : Nat)
   /-- Finite lexical captures and a recursive code-group descriptor. -/
   | closure (moduleName : String) (code : Nat) (captured : List (VarId × Value))
@@ -31,6 +33,8 @@ def Value.equal (left right : Value) : Bool :=
   | .cons a b, .cons c d => a.equal c && b.equal d
   | .tuple xs, .tuple ys => Value.equalList xs ys
   | .bitstring xs, .bitstring ys => xs == ys
+  | .pid a, .pid b => a == b
+  | .reference a, .reference b => a == b
   | .function m f a, .function n g b => m == n && f == g && a == b
   | .closure m c env group, .closure n d other bindings =>
     m == n && c == d && group == bindings && Value.equalEnv env other
@@ -122,6 +126,8 @@ inductive Pattern where
   | lit (value : Value)
   | cons (head tail : Pattern)
   | tuple (elements : List Pattern)
+  /-- Exact sequence of unsigned eight-bit integer segment patterns. -/
+  | bytes (elements : List Pattern)
   deriving Repr, BEq
 
 /-- Name-resolved syntax for the initial sequential implementation slice.
@@ -134,6 +140,8 @@ inductive Expr where
   | seq (first second : Expr)
   | cons (head tail : Expr)
   | tuple (elements : List Expr)
+  /-- Ordered unsigned eight-bit integer segment construction. -/
+  | bytes (elements : List Expr)
   | call (moduleName functionName : Expr) (arguments : List Expr)
   | apply (function : Expr) (arguments : List Expr)
   | primop (name : String) (arguments : List Expr)

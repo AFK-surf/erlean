@@ -85,6 +85,20 @@ const languageCases = [
   ['prepend', [tuple([integer(1)]), list([atom('tail')])]],
   ['prepend', [integer(1), atom('improper')]],
 ];
+const bytes = hex => ({ tag: 'bitstring', bits: String(hex.length * 4), hex });
+const codecCases = [
+  ...[-257, -1, 0, 1, 127, 128, 255, 256, '123456789012345678901234567890'].map(
+    value => ['roundtrip', [integer(value)]]),
+  ['encode', [integer(-1)]], ['encode', [atom('bad')]],
+  ['encode_pair', [integer(256), integer(-1)]],
+  ['encode_pair', [atom('bad'), integer(1)]],
+  ['decode', [bytes('')]], ['decode', [bytes('ff')]], ['decode', [bytes('0102')]],
+  ['decode', [{ tag: 'bitstring', bits: '7', hex: 'fe' }]],
+  ['decode', [atom('bad')]],
+  ['decode_pair', [bytes('00ff')]], ['decode_pair', [bytes('ff')]],
+];
+for (const [name, values] of codecCases) differential(
+  'tests/fixtures/erlang/byte_codec/core.json', 'tests/fixtures/erlang/byte_codec.erl', name, values);
 const higherOrderCases = [nil, list([integer(1), atom('two'), tuple([nil])]),
   list([integer(1)], atom('improper'))];
 for (const value of higherOrderCases) differential(
@@ -135,4 +149,4 @@ assert.match(unsupported.stderr, /unsupported.*get_module_info/s);
 const exhausted = run(executable, ['run', artifact, 'loop', '[]', '50']);
 assert.equal(exhausted.status, 2, 'Fuel exhaustion has its own exit status');
 assert.match(exhausted.stderr, /Fuel exhausted/);
-console.log(`Sequential checks passed: ${cases.length + closureCases.length + higherOrderCases.length + exceptionCases.length + 2 * languageCases.length + 2} OTP 29.0.6 differential cases across Erlang, Elixir, and Gleam; unsupported runtime fault; fuel exhaustion.`);
+console.log(`Sequential checks passed: ${cases.length + closureCases.length + higherOrderCases.length + exceptionCases.length + codecCases.length + 2 * languageCases.length + 2} OTP 29.0.6 differential cases across Erlang, Elixir, and Gleam; unsupported runtime fault; fuel exhaustion.`);

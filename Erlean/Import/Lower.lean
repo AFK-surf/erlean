@@ -26,8 +26,7 @@ private def signature : Term → Except String (String × Nat)
   | .tuple [.atom name, .integer (.ofNat arity)] => .ok (name, arity)
   | _ => .error "Expected a function name/arity pair"
 
-/-- Decode canonical bitstring literals without discarding nonzero padding.
-    Runtime bit construction and segment matching remain outside this profile. -/
+/-- Decode canonical bitstring literals without discarding nonzero padding. -/
 def lowerBitstring (count : Nat) (hex : String) : Except String Value := do
   unless hex.length == 2 * ((count + 7) / 8) do
     throw "Bitstring byte encoding does not match its length"
@@ -73,6 +72,27 @@ private def tagOf : Term → String
   | .tuple (.atom tag :: _) => tag
   | _ => "malformed record"
 
+/-- This profile accepts only statically specified unsigned integer bytes. -/
+private def byteSegmentValue : Term → Except String Term
+  | .tuple [.atom "c_bitstr", _, value, size, unit, type, flags] => do
+    unless (← literal size) == .integer 8 do
+      throw "Unsupported binary segment size: expected literal 8"
+    unless (← literal unit) == .integer 1 do
+      throw "Unsupported binary segment unit: expected literal 1"
+    unless (← literal type) == .atom "integer" do
+      throw "Unsupported binary segment type: expected integer"
+    unless (← properList (← literal flags)) == [.atom "unsigned", .atom "big"] do
+      throw "Unsupported binary segment flags: expected [unsigned,big]"
+    return value
+  | _ => .error "Malformed binary segment: expected a c_bitstr record"
+
+private def bytePatternSegmentValue (segment : Term) : Except String Term := do
+  let value ← byteSegmentValue segment
+  match value with
+  | .tuple [.atom "c_var", _, _]
+  | .tuple [.atom "c_literal", _, .integer _] => return value
+  | _ => throw "Unsupported byte pattern: expected a variable or integer literal"
+
 private def patternNames : Nat → Term → Except String (List Term)
   | 0, _ => .error "Pattern nesting exceeds the import depth limit"
   | fuel + 1, term => do
@@ -85,6 +105,9 @@ private def patternNames : Nat → Term → Except String (List Term)
       return (← patternNames fuel head) ++ (← patternNames fuel tail)
     | .tuple [.atom "c_tuple", _, items] =>
       return (← (← properList items).mapM (patternNames fuel)).flatten
+    | .tuple [.atom "c_binary", _, segments] =>
+      let values ← (← properList segments).mapM bytePatternSegmentValue
+      return (← values.mapM (patternNames fuel)).flatten
     | _ => throw s!"Unsupported or malformed Core pattern: {tagOf term}"
 
 private def lowerPattern : Nat → NameScope → Term → Except String Pattern
@@ -99,6 +122,9 @@ private def lowerPattern : Nat → NameScope → Term → Except String Pattern
       return .cons (← lowerPattern fuel scope head) (← lowerPattern fuel scope tail)
     | .tuple [.atom "c_tuple", _, items] =>
       return .tuple (← (← properList items).mapM (lowerPattern fuel scope))
+    | .tuple [.atom "c_binary", _, segments] =>
+      let values ← (← properList segments).mapM bytePatternSegmentValue
+      return .bytes (← values.mapM (lowerPattern fuel scope))
     | _ => throw s!"Unsupported or malformed Core pattern: {tagOf term}"
 
 private abbrev ClosureTable := List (Option ClosureDef)
@@ -163,6 +189,9 @@ private def lowerExprM : Nat → NameScope → Term → LowerM Expr
       return .values (← (← properList items).mapM (lowerExprM fuel scope))
     | .tuple [.atom "c_tuple", _, items] =>
       return .tuple (← (← properList items).mapM (lowerExprM fuel scope))
+    | .tuple [.atom "c_binary", _, segments] =>
+      let values ← (← properList segments).mapM (fun segment => do pure (← byteSegmentValue segment))
+      return .bytes (← values.mapM (lowerExprM fuel scope))
     | .tuple [.atom "c_cons", _, head, tail] =>
       return .cons (← lowerExprM fuel scope head) (← lowerExprM fuel scope tail)
     | .tuple [.atom "c_seq", _, first, second] =>
@@ -200,7 +229,9 @@ private def lowerExprM : Nat → NameScope → Term → LowerM Expr
     | .tuple [.atom "c_primop", _, name, args] =>
       let name ← atom (← literal name)
       let args ← properList args
-      if (name == "match_fail" && args.length == 1) || (name == "raise" && args.length == 2) then
+      if (name == "match_fail" && args.length == 1) || (name == "raise" && args.length == 2) ||
+          (["recv_peek_message", "recv_next", "remove_message"].contains name && args.isEmpty) ||
+          (name == "recv_wait_timeout" && args.length == 1) then
         return .primop name (← args.mapM (lowerExprM fuel scope))
       throw s!"Unsupported primop: {name}/{args.length}"
     | _ => throw s!"Unsupported or malformed Core construct: {tagOf term}"
