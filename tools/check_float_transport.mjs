@@ -1,5 +1,6 @@
 // Bit-preserving float transport checks; no floating-point computation proof.
 import assert from 'node:assert/strict';
+import { normalizeTermJson as normalize } from './term_json.mjs';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -66,21 +67,6 @@ const samples = [
   '3ff8000000000000', // 1.5.
   'c004000000000000', // -2.5.
 ];
-function normalize(value) {
-  if (Array.isArray(value)) return value.map(normalize);
-  if (!value || typeof value !== 'object') return value;
-  if (value.tag === 'map') {
-    const entries = value.entries.map(([key, item]) => [normalize(key), normalize(item)]);
-    const keys = entries.map(([key]) => JSON.stringify(key));
-    assert.equal(new Set(keys).size, keys.length, 'Map output keys must be unique');
-    entries.sort(([left], [right]) => {
-      const a = JSON.stringify(left), b = JSON.stringify(right);
-      return a < b ? -1 : a > b ? 1 : 0;
-    });
-    return { tag: 'map', entries };
-  }
-  return Object.fromEntries(Object.keys(value).sort().map(key => [key, normalize(value[key])]));
-}
 const cases = [];
 const add = (fn, args, value) => cases.push({ function: fn, arguments: args,
   expected: { status: 'returned', values: [value] } });
@@ -105,7 +91,7 @@ const actual = JSON.parse(run(executable, ['run-batch', artifact, casesPath, '10
 assert.ok(Array.isArray(actual));
 assert.equal(actual.length, cases.length);
 for (const [index, test] of cases.entries()) {
-  const oracle = JSON.parse(run('asdf', ['exec', 'escript', 'tests/semantics/oracle.escript',
+  const oracle = JSON.parse(run('asdf', ['exec', 'escript', 'tools/otp_oracle.escript',
     source, test.function, JSON.stringify(test.arguments)]));
   assert.deepEqual(normalize(actual[index]), normalize(oracle), `Float differential ${index}: ${test.function}`);
   assert.deepEqual(normalize(actual[index]), normalize(test.expected), `Float bits preserved at case ${index}`);

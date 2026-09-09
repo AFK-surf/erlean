@@ -108,6 +108,16 @@ the module once and returns an ordered JSON array using the same outcome schema.
 Fuel applies to each call. A malformed case, model fault, or exhausted call fails
 the batch without partial output.
 
+For OTP compatibility checks, feed the same case file to the reusable oracle:
+
+```sh
+asdf exec escript tools/otp_oracle.escript --batch SOURCE.erl CASES_JSON_FILE
+```
+
+It defaults to exact OTP 29.0.6 and also accepts an explicit `--otp 29.0.2`
+before `--batch`. Select the matching asdf runtime. It executes trusted test
+modules and reports ordered outcomes, not a correctness proof.
+
 ### 3. Use a function contract in Lean
 
 A contract states which inputs are allowed and what the function must return.

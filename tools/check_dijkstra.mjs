@@ -107,7 +107,7 @@ for (const [label, rawSource, rawEdges] of cases) {
   const edges = rawEdges.map(edge => edge.map(BigInt));
   const argumentsJson = JSON.stringify([integer(sourceVertex), graphValue(edges)]);
   const lean = JSON.parse(run(executable, ['run', artifact, 'distances', argumentsJson, '500000']));
-  const otp = JSON.parse(run('asdf', ['exec', 'escript', 'tests/semantics/oracle.escript',
+  const otp = JSON.parse(run('asdf', ['exec', 'escript', 'tools/otp_oracle.escript',
     source, 'distances', argumentsJson]));
   assert.deepEqual(lean, otp, `OTP differential: ${label}`);
   assert.equal(lean.status, 'returned', label);
@@ -140,7 +140,7 @@ const invalidCases = [
 for (const values of invalidCases) {
   const argumentsJson = JSON.stringify(values);
   const lean = JSON.parse(run(executable, ['run', artifact, 'distances', argumentsJson]));
-  const otp = JSON.parse(run('asdf', ['exec', 'escript', 'tests/semantics/oracle.escript',
+  const otp = JSON.parse(run('asdf', ['exec', 'escript', 'tools/otp_oracle.escript',
     source, 'distances', argumentsJson]));
   assert.deepEqual(lean, otp, 'Invalid Dijkstra input differential');
   assert.deepEqual(lean, { status: 'raised', class: 'error', reason: { tag: 'atom', value: 'badarg' } });

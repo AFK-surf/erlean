@@ -130,6 +130,12 @@ rejected. Returned floats use sixteen lowercase digits. No host decimal conversi
 occurs. Float literal patterns, including floats nested in literal containers,
 are unsupported. Variable and wildcard patterns can carry float payloads.
 
+Packed constant binary patterns also lower to canonical bitstrings. This profile
+requires unsigned big-endian integers, unit one, in-range values, and at most
+65536 total bits. The compiler uses this shape for literal string patterns.
+Wide variable segments, other flags, and arbitrary-width construction remain
+unsupported. Existing unsigned-byte construction and matching stay supported.
+
 Maps use canonical unique data keys. Keys can be integers, atoms, lists, tuples,
 bitstrings, pids, or references. Map, float, and function keys are unsupported,
 including those nested in composite keys. Values can contain maps and functions.

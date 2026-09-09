@@ -2,23 +2,78 @@
 %%! -noshell
 -mode(compile).
 
-main([Source, Function, Arguments | Dependencies]) ->
+%% A portable OTP oracle for trusted test modules. JSON output preserves exact
+%% integer, float-bit, and bitstring representations. Maps have no output order.
+main(Arguments) ->
+    try
+        {Version, Command} = options(Arguments),
+        check_version(Version),
+        Result = execute(Command),
+        io:put_chars([json:encode(Result), $\n])
+    catch Class:Reason ->
+        io:format(standard_error, "otp_oracle: ~p:~p~n", [Class, Reason]),
+        halt(1)
+    end.
+
+options(["--otp", Version | Command]) when Version =:= "29.0.2"; Version =:= "29.0.6" ->
+    {Version, Command};
+options(["--otp", Version | _]) -> error({unsupported_otp_profile, Version});
+options(Command) -> {"29.0.6", Command}.
+
+check_version(Version) ->
     VersionFile = filename:join([code:root_dir(), "releases", "29", "OTP_VERSION"]),
     {ok, VersionBytes} = file:read_file(VersionFile),
-    <<"29.0.6">> = string:trim(VersionBytes),
+    Running = string:trim(VersionBytes),
+    case Running =:= list_to_binary(Version) of
+        true -> ok;
+        false -> error({otp_patch_mismatch, Version, Running})
+    end.
+
+execute(["--batch", Source, CasesFile | Dependencies]) ->
+    {ok, CasesJson} = file:read_file(CasesFile),
+    Cases = json:decode(CasesJson),
+    true = is_list(Cases),
+    %% Validate every case before executing any case. Encode the complete result
+    %% before publishing it, so validation failures cannot leak partial results.
+    Prepared = [prepare_case(Case) || Case <- Cases],
+    Module = load_test_module(Source, Dependencies),
+    [evaluate(Module, Function, Args) || {Function, Args} <- Prepared];
+execute([Source, Function, Arguments | Dependencies]) ->
+    false = lists:prefix("--", Source),
+    Args = json:decode(list_to_binary(Arguments)),
+    true = is_list(Args),
+    Decoded = [decode(X) || X <- Args],
+    Module = load_test_module(Source, Dependencies),
+    evaluate(Module, list_to_atom(Function), Decoded);
+execute(_) ->
+    error("Usage: otp_oracle.escript [--otp VERSION] SOURCE FUNCTION JSON [DEPS] | "
+          "[--otp VERSION] --batch SOURCE CASES_JSON_FILE [DEPS]").
+
+prepare_case(#{<<"function">> := Function, <<"arguments">> := Arguments})
+        when is_binary(Function), is_list(Arguments) ->
+    {binary_to_atom(Function), [decode(X) || X <- Arguments]};
+prepare_case(_) -> error(invalid_batch_case).
+
+load_test_module(Source, Dependencies) ->
     lists:foreach(fun(Dependency) ->
         {Name, Code} = load_artifact(Dependency),
         {module, Name} = code:load_binary(Name, Dependency, Code)
     end, Dependencies),
     {Module, Beam} = load_artifact(Source),
     {module, Module} = code:load_binary(Module, Source, Beam),
-    Args = [decode(X) || X <- json:decode(list_to_binary(Arguments))],
-    Result = try apply(Module, list_to_atom(Function), Args) of
-        Value -> #{status => returned, values => [encode(Value)]}
+    Module.
+
+evaluate(Module, Function, Args) ->
+    Outcome = try apply(Module, Function, Args) of
+        Value -> {returned, Value}
     catch Class:Reason ->
-        #{status => raised, class => Class, reason => encode(Reason)}
+        {raised, Class, Reason}
     end,
-    io:put_chars([json:encode(Result), $\n]).
+    case Outcome of
+        {returned, Result} -> #{status => returned, values => [encode(Result)]};
+        {raised, ExceptionClass, ExceptionReason} ->
+            #{status => raised, class => ExceptionClass, reason => encode(ExceptionReason)}
+    end.
 
 load_artifact(Source) ->
     case filename:extension(Source) of

@@ -52,7 +52,7 @@ function differential(input, compiled, name, values) {
   const args = JSON.stringify(values);
   const lean = run(executable, ['run', input, name, args]);
   assert.equal(lean.status, 0, `Lean ${name}: ${lean.stderr}`);
-  const otp = run('asdf', ['exec', 'escript', 'tests/semantics/oracle.escript', compiled, name, args]);
+  const otp = run('asdf', ['exec', 'escript', 'tools/otp_oracle.escript', compiled, name, args]);
   assert.equal(otp.status, 0, `OTP ${name}: ${otp.stderr}`);
   assert.deepEqual(JSON.parse(lean.stdout), JSON.parse(otp.stdout), `${name}(${args})`);
 }
@@ -134,7 +134,7 @@ for (const value of [integer(42), tuple([atom('linked'), nil])]) {
   const args = JSON.stringify([value]);
   const lean = run(executable, ['run-linked', 'modular_client', 'relay', args,
     'tests/fixtures/erlang/modular_client/core.json', 'tests/fixtures/erlang/identity/core.json']);
-  const otp = run('asdf', ['exec', 'escript', 'tests/semantics/oracle.escript',
+  const otp = run('asdf', ['exec', 'escript', 'tools/otp_oracle.escript',
     'tests/fixtures/erlang/modular_client.erl', 'relay', args, 'tests/fixtures/erlang/identity.erl']);
   assert.equal(lean.status, 0, lean.stderr);
   assert.equal(otp.status, 0, otp.stderr);

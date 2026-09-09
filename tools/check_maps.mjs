@@ -1,5 +1,6 @@
 // Compatibility checks for the finite data-map profile, not a universal proof.
 import assert from 'node:assert/strict';
+import { normalizeTermJson as normalize } from './term_json.mjs';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -62,24 +63,6 @@ const add = (fn, args, expected) => cases.push({ function: fn, arguments: args, 
 const returned = value => ({ status: 'returned', values: [value] });
 const raised = reason => ({ status: 'raised', class: 'error', reason });
 
-// Map iteration order is not semantic. Sort entries only after recursively
-// normalizing exact keys; reject duplicates rather than hide an invalid output.
-function normalize(value) {
-  if (Array.isArray(value)) return value.map(normalize);
-  if (!value || typeof value !== 'object') return value;
-  if (value.tag === 'map') {
-    const entries = value.entries.map(([key, item]) => [normalize(key), normalize(item)]);
-    const keyed = entries.map(entry => [JSON.stringify(entry[0]), entry]);
-    assert.equal(new Set(keyed.map(([key]) => key)).size, keyed.length, 'Output maps must have unique exact keys');
-    keyed.sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0);
-    return { tag: 'map', entries: keyed.map(([, entry]) => entry) };
-  }
-  if (value.tag === 'list') {
-    return value.items.reduceRight((tail, head) => ({ head: normalize(head), tag: 'cons', tail }), normalize(value.tail));
-  }
-  return Object.fromEntries(Object.keys(value).sort().map(key => [key, normalize(value[key])]));
-}
-
 add('literal', [], returned(map([atom('answer'), integer(42)],
   [atom('nested'), map([atom('items'), list(a, b)])], [integer(1), atom('integer_key')])));
 add('construct', [a, integer(1), a, integer(2)], returned(map([a, integer(2)])));
@@ -105,6 +88,14 @@ for (const fn of ['assoc', 'exact']) add(fn, [atom('bad'), a, integer(1)], raise
 for (const value of [map([atom('answer'), one]), one, atom('bad')]) add('literal_pattern', [value]);
 add('nested_pattern', [map([atom('outer'), map([atom('inner'), two])])], returned(tuple(atom('found'), two)));
 add('nested_pattern', [map([atom('outer'), atom('bad')])], returned(atom('absent')));
+for (const [value, outcome] of [
+  [{ tag: 'bitstring', bits: '40', hex: '7265616479' }, 'ready'],
+  [{ tag: 'bitstring', bits: '3', hex: 'a0' }, 'partial'],
+  [{ tag: 'bitstring', bits: '8', hex: 'a0' }, 'absent'],
+  [{ tag: 'bitstring', bits: '48', hex: '726561647900' }, 'absent'],
+  [atom('ready'), 'absent'], [map(), 'absent']]) {
+  add('packed_pattern', [map([atom('status'), value])], returned(atom(outcome)));
+}
 for (const value of [empty, two, atom('bad')]) {
   add('empty_pattern', [value], returned(atom(value.tag === 'map' ? 'matched' : 'absent')));
 }
@@ -155,7 +146,7 @@ const actual = JSON.parse(run(executable, ['run-batch', artifact, casesPath, '10
 assert.ok(Array.isArray(actual));
 assert.equal(actual.length, cases.length);
 for (const [index, test] of cases.entries()) {
-  const oracle = JSON.parse(run('asdf', ['exec', 'escript', 'tests/semantics/oracle.escript',
+  const oracle = JSON.parse(run('asdf', ['exec', 'escript', 'tools/otp_oracle.escript',
     source, test.function, JSON.stringify(test.arguments)]));
   assert.deepEqual(normalize(actual[index]), normalize(oracle), `Map differential ${index}: ${test.function}`);
   if (test.expected !== undefined) {
@@ -164,7 +155,7 @@ for (const [index, test] of cases.entries()) {
 }
 // Multiple absent exact-update keys are an explicit model boundary, not an
 // omitted compatibility case. Record OTP's result without adopting its key order.
-const ambiguousOracle = JSON.parse(run('asdf', ['exec', 'escript', 'tests/semantics/oracle.escript',
+const ambiguousOracle = JSON.parse(run('asdf', ['exec', 'escript', 'tools/otp_oracle.escript',
   source, 'ambiguous_exact', JSON.stringify([empty])]));
 assert.equal(ambiguousOracle.status, 'raised');
 assert.equal(ambiguousOracle.class, 'error');

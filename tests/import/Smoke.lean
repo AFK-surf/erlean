@@ -105,6 +105,23 @@ def main : IO Unit := do
   let segment := fun size unit kind options => record "c_bitstr"
     [literal (.integer 42), size, literal unit, literal kind, literal options]
   let binary := fun segment => record "c_binary" [.list [segment] .nil]
+  let packed := fun value width => binary (record "c_bitstr"
+    [literal (.integer value), literal (.integer width), literal (.integer 1),
+      literal (.atom "integer"), literal flags])
+  let packedValue ← match lowerBitstring 16 "0102" with
+    | .ok value => pure value
+    | .error message => throw (IO.userError message)
+  assertTrue (isOkEq (lowerExpr 64 [] (patternCase (packed 258 16)))
+    (.caseE (.lit (.map [])) [([.lit packedValue], .lit (.atom "true"), .lit (.atom "ok"))]))
+    "packed unsigned literal binary pattern"
+  for value in [-1, 65536] do
+    expectError (lowerExpr 64 [] (patternCase (packed value 16)))
+      "out-of-range pattern constants must not truncate"
+  expectError (lowerExpr 64 [] (patternCase (packed 0 65537)))
+    "packed pattern import allocation limit"
+  expectError (lowerExpr 64 [] (patternCase (binary (record "c_bitstr"
+    [patternBinder, literal (.integer 16), literal (.integer 1),
+      literal (.atom "integer"), literal flags])))) "wide variable pattern remains unsupported"
   assertTrue (isOkEq (lowerExpr 64 [] (binary
     (segment (literal (.integer 8)) (.integer 1) (.atom "integer") flags)))
     (.bytes [.lit (.integer 42)])) "fixed unsigned-byte segment"

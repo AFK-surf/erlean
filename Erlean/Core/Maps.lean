@@ -141,6 +141,24 @@ theorem Value.map_lookup_comparable (key : MapKey) (value : Value)
   have comparableEntries := ((Value.map_comparable_iff entries).mp comparableMap).2
   exact comparableEntries (key, value) (FiniteMap.mem_of_lookup key value entries found)
 
+theorem Value.map_lookup_default_public (key : MapKey) (default : Value)
+    (entries : List (MapKey × Value))
+    (publicMap : (Value.map entries).isPublic = true)
+    (publicDefault : default.isPublic = true) :
+    ((FiniteMap.lookup key entries).getD default).isPublic = true := by
+  cases found : FiniteMap.lookup key entries with
+  | none => exact publicDefault
+  | some value => exact Value.map_lookup_public key value entries publicMap found
+
+theorem Value.map_lookup_default_comparable (key : MapKey) (default : Value)
+    (entries : List (MapKey × Value))
+    (comparableMap : (Value.map entries).exactComparable = true)
+    (comparableDefault : default.exactComparable = true) :
+    ((FiniteMap.lookup key entries).getD default).exactComparable = true := by
+  cases found : FiniteMap.lookup key entries with
+  | none => exact comparableDefault
+  | some value => exact Value.map_lookup_comparable key value entries comparableMap found
+
 /-- Canonicality makes the stored representation extensional. This is why
     structural equality of these entry lists implements order-independent map
     equality, rather than exposing the order of source insertions. -/
@@ -161,4 +179,3 @@ theorem Value.map_equal_iff_lookup (left right : List (MapKey × Value))
       ((Value.map_comparable_iff right).mp rightComparable).1 same)
 
 end Erlean.Core
-

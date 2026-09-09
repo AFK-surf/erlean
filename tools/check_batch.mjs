@@ -1,5 +1,6 @@
 // CLI batching preserves single-call results and publishes no partial output.
 import assert from 'node:assert/strict';
+import { normalizeTermJson } from './term_json.mjs';
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -21,9 +22,23 @@ function invoke(args) {
   return result;
 }
 
+function oracle(args) {
+  const result = spawnSync('asdf', ['exec', 'escript', 'tools/otp_oracle.escript', ...args], {
+    encoding: 'utf8', timeout: 30000,
+    env: { ...process.env, ASDF_ERLANG_VERSION: '29.0.6', ERL_FLAGS: '+S 2:2 +SDcpu 1 +SDio 1' },
+  });
+  if (result.error) throw result.error;
+  return result;
+}
+
 function batch(artifact, cases, fuel) {
   writeFileSync(casesPath, JSON.stringify(cases));
   return invoke(['run-batch', artifact, casesPath, ...(fuel === undefined ? [] : [String(fuel)])]);
+}
+
+function oracleBatch(source, cases, version) {
+  writeFileSync(casesPath, JSON.stringify(cases));
+  return oracle([...(version ? ['--otp', version] : []), '--batch', source, casesPath]);
 }
 
 function successful(result) {
@@ -61,6 +76,36 @@ try {
     ])), `Batch result ${index} must match the existing single-call command`);
   }
 
+  const source = 'tests/fixtures/erlang/sequential.erl';
+  assert.deepEqual(successful(oracleBatch(source, cases)), results);
+  assert.deepEqual(successful(oracleBatch(source, [], '29.0.6')), []);
+  assert.deepEqual(successful(oracle([source, 'identity', JSON.stringify([payload])])), returned(payload));
+  const transport = [
+    { tag: 'float', bits: '8000000000000000' },
+    { tag: 'bitstring', bits: '3', hex: 'a0' },
+    { tag: 'map', entries: [[atom('payload'), { tag: 'float', bits: '3ff8000000000000' }]] },
+  ];
+  assert.deepEqual(successful(oracleBatch(source,
+    transport.map(value => ({ function: 'identity', arguments: [value] })))), transport.map(returned));
+  failed(oracleBatch(source, [cases[0], { function: 'identity' }]),
+    1, /invalid_batch_case/);
+  failed(oracleBatch(source, {}), 1, /otp_oracle:/);
+  writeFileSync(casesPath, '[invalid JSON');
+  failed(oracle(['--batch', source, casesPath]), 1, /otp_oracle:/);
+  failed(oracleBatch(source, [], '29.0.2'), 1, /otp_patch_mismatch/);
+  failed(oracleBatch(source, [], '29.0.5'), 1, /unsupported_otp_profile/);
+
+  const nil = { tag: 'nil' };
+  const listKey = { tag: 'list', items: [atom('key')], tail: nil };
+  const consKey = { tail: nil, tag: 'cons', head: atom('key') };
+  const entries = [[listKey, transport[0]], [atom('other'), transport[2]]];
+  assert.deepEqual(normalizeTermJson({ tag: 'map', entries }),
+    normalizeTermJson({ entries: [[atom('other'), transport[2]], [consKey, transport[0]]], tag: 'map' }));
+  assert.throws(() => normalizeTermJson({ tag: 'map', entries: [[listKey, nil], [consKey, nil]] }),
+    /unique exact keys/);
+  assert.notDeepEqual(normalizeTermJson(transport[0]),
+    normalizeTermJson({ tag: 'float', bits: '0000000000000000' }));
+
   failed(batch(sequential, [cases[0], { function: 'identity' }]), 1, /arguments/);
   failed(batch(sequential, [cases[0], { function: 7, arguments: [] }]), 1, /erlean:/);
   failed(batch(sequential, [cases[0], { function: 'identity', arguments: 'not_an_array' }]), 1, /erlean:/);
@@ -73,7 +118,7 @@ try {
     2, /Batch case 1.*Fuel exhausted/);
   failed(batch(identity, identities, 0), 2, /Fuel exhausted after 0 steps/);
   failed(batch(identity, identities, 'invalid'), 1, /Fuel must be a natural number/);
-  console.log('Batch CLI checks passed: ordered results, raised outcomes, input validation, model faults, per-case fuel, and atomic stdout.');
+  console.log('Batch CLI and OTP oracle checks passed: ordered results, raised outcomes, exact transport, patch selection, input validation, model faults, per-case fuel, and atomic stdout.');
 } finally {
   rmSync(temporary, { recursive: true, force: true });
 }

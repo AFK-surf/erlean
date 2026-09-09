@@ -20,6 +20,32 @@ theorem withMapKey_supported (key : MapKey)
     withMapKey key.toValue body = body key := by
   simp [withMapKey, MapKey.toValue_toMapKey]
 
+theorem withMapKey_of_toMapKey (key : Value) (mapKey : MapKey)
+    (body : MapKey → Transition LocalState Outcome)
+    (supported : key.toMapKey = some mapKey) :
+    withMapKey key body = body mapKey := by
+  simp [withMapKey, supported]
+
+theorem mapBuiltin_get_default_of_toMapKey (state : LocalState)
+    (key : Value) (mapKey : MapKey) (entries : FiniteMap.Entries Value) (default : Value)
+    (publicMap : (Value.map entries).isPublic = true)
+    (publicKey : key.isPublic = true) (publicDefault : default.isPublic = true)
+    (supported : key.toMapKey = some mapKey) :
+    mapBuiltin state "get" [key, .map entries, default] =
+      nextControl state (.ret [(FiniteMap.lookup mapKey entries).getD default]) := by
+  simp [mapBuiltin, Value.publicList, publicMap, publicKey, publicDefault,
+    withMap_public state entries _ publicMap, withMapKey_of_toMapKey key mapKey _ supported]
+
+theorem mapBuiltin_put_of_toMapKey (state : LocalState)
+    (key : Value) (mapKey : MapKey) (value : Value) (entries : FiniteMap.Entries Value)
+    (publicMap : (Value.map entries).isPublic = true)
+    (publicKey : key.isPublic = true) (publicValue : value.isPublic = true)
+    (supported : key.toMapKey = some mapKey) :
+    mapBuiltin state "put" [key, value, .map entries] =
+      nextControl state (.ret [.map (FiniteMap.insert mapKey value entries)]) := by
+  simp [mapBuiltin, Value.publicList, publicMap, publicKey, publicValue,
+    withMap_public state entries _ publicMap, withMapKey_of_toMapKey key mapKey _ supported]
+
 theorem mapBuiltin_get (state : LocalState) (key : MapKey)
     (entries : FiniteMap.Entries Value)
     (publicMap : (Value.map entries).isPublic = true) :

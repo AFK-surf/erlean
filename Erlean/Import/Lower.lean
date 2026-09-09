@@ -1,6 +1,7 @@
 import Erlean.Import.RawCore
 import Erlean.Core.Scope
 import Erlean.Core.FiniteMap
+import Erlean.Core.Bytes
 
 namespace Erlean.Import
 
@@ -121,6 +122,25 @@ private def bytePatternSegmentValue (segment : Term) : Except String Term := do
   | .tuple [.atom "c_literal", _, .integer _] => return value
   | _ => throw "Unsupported byte pattern: expected a variable or integer literal"
 
+/-- The compiler can pack a literal string pattern into one wide integer segment.
+    Fold only unsigned, big-endian, in-range constants, with a bounded total size.
+    Out-of-range pattern integers must not be truncated into matching values. -/
+private def packedPatternBits (segments : List Term) : Option (List Bool) := do
+  let pieces ← segments.mapM fun segment => do
+    let .tuple [.atom "c_bitstr", _, value, size, unit, kind, flags] := segment | none
+    let .integer (.ofNat value) ← (literal value).toOption | none
+    let .integer (.ofNat width) ← (literal size).toOption | none
+    if (← (literal unit).toOption) != .integer 1 then none else pure ()
+    if (← (literal kind).toOption) != .atom "integer" then none else pure ()
+    let flags ← ((literal flags).bind properList).toOption
+    if flags != [.atom "unsigned", .atom "big"] then none else pure ()
+    pure (width, value)
+  -- Keep the existing byte-pattern representation and its proof artifacts stable.
+  if !pieces.any (fun piece => piece.1 != 8) then none else pure ()
+  if (pieces.map Prod.fst).sum > 65536 then none else pure ()
+  if !pieces.all (fun piece => piece.2 < 2 ^ piece.1) then none else pure ()
+  return pieces.flatMap (fun (width, value) => (encodeLowBits width value).reverse)
+
 private def patternNames : Nat → Term → Except String (List Term)
   | 0, _ => .error "Pattern nesting exceeds the import depth limit"
   | fuel + 1, term => do
@@ -137,7 +157,9 @@ private def patternNames : Nat → Term → Except String (List Term)
       let pairs ← mapPatternPairs base pairs
       return (← pairs.mapM (fun pair => patternNames fuel pair.2)).flatten
     | .tuple [.atom "c_binary", _, segments] =>
-      let values ← (← properList segments).mapM bytePatternSegmentValue
+      let segments ← properList segments
+      if (packedPatternBits segments).isSome then return []
+      let values ← segments.mapM bytePatternSegmentValue
       return (← values.mapM (patternNames fuel)).flatten
     | _ => throw s!"Unsupported or malformed Core pattern: {tagOf term}"
 
@@ -166,7 +188,9 @@ private def lowerPattern : Nat → NameScope → Term → Except String Pattern
         return (key, ← lowerPattern fuel scope value)
       return .map (lowered.map Prod.fst) (lowered.map Prod.snd)
     | .tuple [.atom "c_binary", _, segments] =>
-      let values ← (← properList segments).mapM bytePatternSegmentValue
+      let segments ← properList segments
+      if let some bits := packedPatternBits segments then return .lit (.bitstring bits)
+      let values ← segments.mapM bytePatternSegmentValue
       return .bytes (← values.mapM (lowerPattern fuel scope))
     | _ => throw s!"Unsupported or malformed Core pattern: {tagOf term}"
 

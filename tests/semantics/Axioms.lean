@@ -63,8 +63,13 @@ import Erlean.Examples.Dijkstra.Correctness
 #print axioms Erlean.Core.Value.map_equal_iff_lookup
 #print axioms Erlean.Core.Value.map_insert_public
 #print axioms Erlean.Core.Value.map_erase_public
+#print axioms Erlean.Core.Value.map_lookup_default_public
+#print axioms Erlean.Core.Value.map_lookup_default_comparable
 #print axioms Erlean.Semantics.mapBuiltin_put
 #print axioms Erlean.Semantics.mapBuiltin_get
+#print axioms Erlean.Semantics.withMapKey_of_toMapKey
+#print axioms Erlean.Semantics.mapBuiltin_get_default_of_toMapKey
+#print axioms Erlean.Semantics.mapBuiltin_put_of_toMapKey
 #print axioms Erlean.Semantics.mapBuiltin_remove
 #print axioms Erlean.Core.Value.public_of_exactComparable
 #print axioms Erlean.Core.FloatBits.parseHex_finite

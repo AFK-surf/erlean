@@ -6,7 +6,7 @@
          library_get/2, library_get_default/3, library_find/2, library_put/3,
          library_update/3, library_remove/2, library_take/2, library_merge/2,
          key_order/1, value_order/1, pair_order/1, exact_value_order/1,
-         base_order/0, ambiguous_exact/1]).
+         base_order/0, ambiguous_exact/1, packed_pattern/1]).
 
 %% This module must not be named maps: the oracle also calls OTP's maps module.
 literal() -> #{answer => 42, nested => #{items => [a, b]}, 1 => integer_key}.
@@ -19,6 +19,10 @@ ambiguous_exact(Map) -> Map#{z := 1, a := 2}.
 
 literal_pattern(#{answer := Value}) -> {found, Value};
 literal_pattern(_) -> absent.
+
+packed_pattern(#{status := <<"ready">>}) -> ready;
+packed_pattern(#{status := <<5:3>>}) -> partial;
+packed_pattern(_) -> absent.
 
 nested_pattern(#{outer := #{inner := Value}}) -> {found, Value};
 nested_pattern(_) -> absent.

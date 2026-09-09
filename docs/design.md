@@ -117,7 +117,25 @@ sequential, actor, and graph checks still pass. The final bounded build peaked
 at 626.5 MiB and the complete cached validation at 179.9 MiB, with no swap.
 The universal parser-safety and output-width lemmas passed the axiom audit.
 
-Next: extend generic proof rules only when an executable contract needs them.
+Current follow-up: add default-lookup publicness and dynamic-key BIF rules.
+Move the OTP oracle into a reusable tool with exact patch selection and batch
+input. Shared JSON comparison normalizes map order without hiding duplicate keys.
+
+The compiler can pack a string pattern into one wide constant integer segment.
+The importer now folds all-literal unsigned big-endian patterns with unit one
+into canonical bitstrings. Each integer must fit its width. Out-of-range pattern
+constants must not truncate into a different matching value. The total folded
+pattern is limited to 65536 bits before allocation. Existing byte patterns keep
+their representation. Wide variable segments and other flags remain unsupported.
+The full serialized suite passed for these additions, including the new theorem
+axiom checks, 112 OTP map cases, 39 float cases, and all existing compatibility
+checks. Packed-pattern tests cover exact widths, mismatches, wide variables,
+out-of-range constants, and the allocation limit. Generic oracle tests cover
+file-based batches, exception continuation, empty batches, exact term transport,
+invalid input, and unsupported or mismatched OTP patches. The final run peaked
+at 178 MiB with no swap. The oracle now lives at `tools/otp_oracle.escript`.
+There is no retained duplicate at its former test-only path.
+
 Keep application-specific operations and integration progress in their owning
 repositories. No floating-point arithmetic or comparison implementation is planned
 as part of this transport checkpoint.
