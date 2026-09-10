@@ -8,6 +8,7 @@ import Erlean.Core.Checks
 import Erlean.Core.Environment
 import Erlean.Import.Lower
 import Erlean.Semantics.Machine
+import Erlean.Semantics.Lists
 import Erlean.Semantics.Maps
 import Erlean.Semantics.Preservation
 import Erlean.Semantics.VariableSafety

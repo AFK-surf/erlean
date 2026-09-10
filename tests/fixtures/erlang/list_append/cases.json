@@ -1,0 +1,228 @@
+[
+  {
+    "function": "append",
+    "arguments": [
+      {
+        "tag": "list",
+        "items": [],
+        "tail": {
+          "tag": "nil"
+        }
+      },
+      {
+        "tag": "list",
+        "items": [],
+        "tail": {
+          "tag": "nil"
+        }
+      }
+    ]
+  },
+  {
+    "function": "append",
+    "arguments": [
+      {
+        "tag": "list",
+        "items": [],
+        "tail": {
+          "tag": "nil"
+        }
+      },
+      {
+        "tag": "atom",
+        "value": "tail"
+      }
+    ]
+  },
+  {
+    "function": "append",
+    "arguments": [
+      {
+        "tag": "list",
+        "items": [
+          {
+            "tag": "integer",
+            "value": "1"
+          }
+        ],
+        "tail": {
+          "tag": "nil"
+        }
+      },
+      {
+        "tag": "list",
+        "items": [
+          {
+            "tag": "integer",
+            "value": "2"
+          },
+          {
+            "tag": "integer",
+            "value": "3"
+          }
+        ],
+        "tail": {
+          "tag": "nil"
+        }
+      }
+    ]
+  },
+  {
+    "function": "append",
+    "arguments": [
+      {
+        "tag": "list",
+        "items": [
+          {
+            "tag": "integer",
+            "value": "1"
+          }
+        ],
+        "tail": {
+          "tag": "nil"
+        }
+      },
+      {
+        "tag": "atom",
+        "value": "tail"
+      }
+    ]
+  },
+  {
+    "function": "append",
+    "arguments": [
+      {
+        "tag": "cons",
+        "head": {
+          "tag": "integer",
+          "value": "1"
+        },
+        "tail": {
+          "tag": "atom",
+          "value": "tail"
+        }
+      },
+      {
+        "tag": "list",
+        "items": [],
+        "tail": {
+          "tag": "nil"
+        }
+      }
+    ]
+  },
+  {
+    "function": "append",
+    "arguments": [
+      {
+        "tag": "atom",
+        "value": "left"
+      },
+      {
+        "tag": "list",
+        "items": [],
+        "tail": {
+          "tag": "nil"
+        }
+      }
+    ]
+  },
+  {
+    "function": "append",
+    "arguments": [
+      {
+        "tag": "integer",
+        "value": "7"
+      },
+      {
+        "tag": "list",
+        "items": [
+          {
+            "tag": "integer",
+            "value": "1"
+          }
+        ],
+        "tail": {
+          "tag": "nil"
+        }
+      }
+    ]
+  },
+  {
+    "function": "append",
+    "arguments": [
+      {
+        "tag": "list",
+        "items": [
+          {
+            "tag": "list",
+            "items": [
+              {
+                "tag": "integer",
+                "value": "1"
+              }
+            ],
+            "tail": {
+              "tag": "nil"
+            }
+          },
+          {
+            "tag": "atom",
+            "value": "x"
+          }
+        ],
+        "tail": {
+          "tag": "nil"
+        }
+      },
+      {
+        "tag": "list",
+        "items": [
+          {
+            "tag": "list",
+            "items": [
+              {
+                "tag": "integer",
+                "value": "2"
+              }
+            ],
+            "tail": {
+              "tag": "nil"
+            }
+          }
+        ],
+        "tail": {
+          "tag": "nil"
+        }
+      }
+    ]
+  },
+  {
+    "function": "append",
+    "arguments": [
+      {
+        "tag": "list",
+        "items": [
+          {
+            "tag": "integer",
+            "value": "1"
+          }
+        ],
+        "tail": {
+          "tag": "nil"
+        }
+      },
+      {
+        "tag": "cons",
+        "head": {
+          "tag": "integer",
+          "value": "2"
+        },
+        "tail": {
+          "tag": "atom",
+          "value": "tail"
+        }
+      }
+    ]
+  }
+]

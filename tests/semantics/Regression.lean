@@ -41,6 +41,23 @@ private def callBif (name : String) (args : List Expr) : Expr :=
   .call (.lit (.atom "erlang")) (.lit (.atom name)) args
 
 def main : IO Unit := do
+  expect [] (callBif "++" [.lit .nil, .lit (.atom "tail")])
+    (.returned [.atom "tail"]) "append permits an arbitrary right tail"
+  expect [] (callBif "++" [.lit (.cons (.integer 1) .nil), .lit (.atom "tail")])
+    (.returned [.cons (.integer 1) (.atom "tail")]) "append can construct an improper result"
+  expect [] (callBif "++" [.lit (.cons (.integer 1) .nil),
+      .lit (.cons (.integer 2) .nil)])
+    (.returned [.cons (.integer 1) (.cons (.integer 2) .nil)])
+    "append preserves left then right element order"
+  expect [] (callBif "++" [.lit (.cons (.integer 1) (.atom "tail")), .lit .nil])
+    (.raised ⟨.error, .atom "badarg"⟩) "append rejects an improper left list"
+  expect [] (callBif "++" [.lit (.atom "left"), .lit .nil])
+    (.raised ⟨.error, .atom "badarg"⟩) "append rejects a non-list left operand"
+  expect [] (callBif "++" [.lit .nil])
+    (.fault (.unsupported "BIF erlang:++/1")) "append does not invent unsupported arities"
+  expect [] (callBif "++" [.lit .nil, .lit (.exceptionInfo "error")])
+    (.fault (.unsupported "BIF observation of opaque exception information"))
+    "append does not expose protected exception information"
   expect [] (callBif "=<" [.lit (.integer (-5)), .lit (.integer 2)])
     (.returned [.atom "true"]) "integer order includes negative integers"
   expect [] (callBif "=<" [.lit (.integer 7), .lit (.integer 7)])

@@ -192,6 +192,12 @@ def mapBuiltin (state : LocalState) (name : String) (args : Values) :
         FiniteMap.insert pair.1 pair.2 entries) leftEntries))
   | _, _ => unsupported s!"BIF maps:{name}/{args.length}"
 
+/-- Append requires a proper left list but permits any public right tail. -/
+def appendValues : Value → Value → Option Value
+  | .nil, right => some right
+  | .cons head rest, right => (appendValues rest right).map (.cons head)
+  | _, _ => none
+
 /-- Explicit, intentionally small BIF profile. Other BIFs are model faults. -/
 def builtin (state : LocalState) (name : String) (args : Values) :
     Transition LocalState Outcome :=
@@ -215,6 +221,11 @@ def builtin (state : LocalState) (name : String) (args : Values) :
     | _ => unknown
   | "!" => match args with
     | [_, _] => nextControl state (.runtime "send" args)
+    | _ => unknown
+  | "++" => match args with
+    | [left, right] => match appendValues left right with
+      | some result => ret result
+      | none => badarg
     | _ => unknown
   | "+" => match args with
     | [.integer a, .integer b] => ret (.integer (a + b))

@@ -20,7 +20,30 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current work: scalable imported-source emission
+### Current work: list append semantics
+
+Add the missing pure `erlang:'++'/2` operation. A proper left list is required.
+The right operand may be any public term, including an improper tail. Invalid
+left operands raise `badarg`. Opaque or malformed payloads remain unsupported.
+Arbitrary-list execution contracts and lexical preservation pass compilation.
+The serial build took 5 minutes 12.170 seconds with a 630.9 MiB peak and no swap.
+Nine differential cases match OTP 29.0.6, including improper results, improper
+left operands, non-list operands, nested lists, and preserved append order.
+The retained `tests/fixtures/erlang/list_append` artifacts record exact compiler
+provenance and the shared batch cases. Compile with
+`[to_core,binary,no_copt,deterministic,return_errors,return_warnings]`.
+Run the same `cases.json` with `erlean run-batch` and
+`tools/otp_oracle.escript --otp 29.0.6 --batch` for compatibility replay.
+The complete regression suite passed in 2 minutes 21.059 seconds with a 286 MiB
+peak and no swap. This includes generated-artifact checks, machine regressions,
+the expanded axiom audit, 91 sequential, 112 map, 39 float, 17 actor, and 28 graph
+compatibility cases. The first audit attempt found an import-order error in its
+registration file. After correction, the complete suite was rerun successfully.
+The new append laws use only `propext`, `Classical.choice`, and `Quot.sound`.
+This extension does not claim
+general list-library coverage or OTP-like execution complexity.
+
+### Completed checkpoint: scalable imported-source emission
 
 Split generated module literals into private transparent declarations to keep
 elaboration local to each code body. Preserve the public module declaration,

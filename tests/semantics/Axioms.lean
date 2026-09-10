@@ -12,6 +12,8 @@ import Erlean.Semantics.VariableSafety
 import Erlean.Core.Maps
 import Erlean.Core.MapPatterns
 import Erlean.Semantics.Maps
+import Erlean.Semantics.Lists
+
 import Erlean.Logic.Segment
 import Erlean.Logic.Frames
 import Erlean.Runtime.Invariants
@@ -93,3 +95,6 @@ import Erlean.Examples.Dijkstra.Correctness
 #print axioms Erlean.Logic.Controller.Trace.safe
 #print axioms Erlean.Logic.Controller.Trace.exact
 #print axioms Erlean.Logic.Controller.trace_of_refinement
+#print axioms Erlean.Semantics.appendValues_list
+#print axioms Erlean.Semantics.builtin_append_list
+#print axioms Erlean.Semantics.builtin_append_improper
