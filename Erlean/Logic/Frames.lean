@@ -76,6 +76,15 @@ private theorem mapBuiltin_append (state : LocalState) (suffix : List Frame)
       intro key
     | split <;> try simp_all only []
 
+private theorem extendedBuiltin_append (state : LocalState) (suffix : List Frame)
+    (name : String) (args : Values) :
+    extendedBuiltin (appendStack state suffix) name args =
+      appendTransition suffix (extendedBuiltin state name args) := by
+  unfold extendedBuiltin
+  repeat' first
+    | rfl
+    | split <;> try simp_all only []
+
 private theorem builtin_append (state : LocalState) (suffix : List Frame)
     (name : String) (args : Values) :
     builtin (appendStack state suffix) name args =
@@ -84,6 +93,7 @@ private theorem builtin_append (state : LocalState) (suffix : List Frame)
   repeat' first
     | rfl
     | with_reducible exact mapBuiltin_append state suffix _ _
+    | with_reducible exact extendedBuiltin_append state suffix _ _
     | with_reducible apply withMap_append state suffix
       intro entries
     | split <;> try simp_all only []

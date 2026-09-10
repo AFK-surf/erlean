@@ -51,6 +51,7 @@ private def encodeValue : Value → Except String Lean.Json
       ("module", string mod), ("name", string name), ("arity", toJson arity)])
   | .closure mod code _ _ => pure (Lean.Json.mkObj [("tag", string "closure"),
       ("module", string mod), ("code", toJson code)])
+  | .iterator _ => .error "Map iteration cursors cannot be serialized"
   | .exceptionInfo _ => .error "Internal exception information cannot be serialized"
   | .pid id => pure (Lean.Json.mkObj [("tag", string "pid"), ("id", toJson id)])
   | .reference id => pure (Lean.Json.mkObj [("tag", string "reference"), ("id", toJson id)])

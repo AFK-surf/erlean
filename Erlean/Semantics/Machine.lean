@@ -155,11 +155,36 @@ def withMapKey (key : Value) (body : MapKey → Transition LocalState Outcome) :
   | some mapKey => body mapKey
   | none => unsupported "Map key outside the finite key profile"
 
+/-- The elements of a proper list, in order. An improper tail and a non-list
+    are both invalid, which is the domain boundary of `is_list/1` and `length/1`. -/
+def listValues : Value → Option (List Value)
+  | .nil => some []
+  | .cons head tail => (listValues tail).map (head :: ·)
+  | _ => none
+
+/-- Proper-list length. An improper tail or a non-list is outside this profile. -/
+def properLength (value : Value) : Option Nat := (listValues value).map List.length
+
+/-- Flatten an iolist into its byte bits. Elements are bytes in `0 .. 255`,
+    whole-byte binaries, or nested iolists. An improper tail, an out-of-range
+    integer, a bit string off a byte boundary, or any other operand is invalid. -/
+def iolistValues : Value → Option (List Bool)
+  | .integer value =>
+    if 0 ≤ value ∧ value < 256 then some (encodeByte value) else none
+  | .bitstring bits => if bits.length % 8 == 0 then some bits else none
+  | .nil => some []
+  | .cons head tail => do
+    let first ← iolistValues head
+    let rest ← iolistValues tail
+    pure (first ++ rest)
+  | _ => none
+
 /-- The finite maps module profile. Values may contain functions; only keys are
     restricted by conversion to MapKey. The right map wins during merge. -/
 def mapBuiltin (state : LocalState) (name : String) (args : Values) :
     Transition LocalState Outcome :=
   let ret (value : Value) := nextControl state (.ret [value])
+  let badarg := raiseError state (.atom "badarg")
   if !Value.publicList args then unsupported "Opaque or malformed maps argument"
   else match name, args with
   | "get", [key, map] => withMap state map fun entries => withMapKey key fun mapKey =>
@@ -190,6 +215,27 @@ def mapBuiltin (state : LocalState) (name : String) (args : Values) :
     withMap state right fun rightEntries =>
       ret (.map (rightEntries.foldl (fun entries pair =>
         FiniteMap.insert pair.1 pair.2 entries) leftEntries))
+  | "keys", [map] => withMap state map fun entries =>
+    ret ((entries.map (fun entry => entry.1.toValue)).foldr Value.cons .nil)
+  | "values", [map] => withMap state map fun entries =>
+    ret ((entries.map Prod.snd).foldr Value.cons .nil)
+  | "with", [keys, map] => withMap state map fun entries =>
+    match listValues keys with
+    | none => badarg
+    | some wanted =>
+      match Value.toMapKeys wanted with
+      | none => unsupported "Map key outside the finite key profile"
+      | some wantedKeys =>
+        ret (.map (entries.filter (fun entry => wantedKeys.contains entry.1)))
+  | "iterator", [map, order] => withMap state map fun entries =>
+    match order with
+    | .atom "ordered" => ret (.iterator entries)
+    | .atom "reversed" => ret (.iterator entries.reverse)
+    | _ => badarg
+  | "next", [.iterator entries] => match entries with
+    | [] => ret (.atom "none")
+    | (key, value) :: rest => ret (.tuple [key.toValue, value, .iterator rest])
+  | "next", [_] => badarg
   | _, _ => unsupported s!"BIF maps:{name}/{args.length}"
 
 /-- Append requires a proper left list but permits any public right tail. -/
@@ -198,7 +244,87 @@ def appendValues : Value → Value → Option Value
   | .cons head rest, right => (appendValues rest right).map (.cons head)
   | _, _ => none
 
-/-- Explicit, intentionally small BIF profile. Other BIFs are model faults. -/
+/-- BIFs added after the initial dispatch. Keeping them in a separate function
+    preserves the equation set of `builtin`, whose size the symbolic execution
+    proofs in `Erlean.Examples` are sensitive to. Callers that exercise these
+    BIFs add `extendedBuiltin` to their simp set. -/
+def extendedBuiltin (state : LocalState) (name : String) (args : Values) :
+    Transition LocalState Outcome :=
+  let ret (value : Value) := nextControl state (.ret [value])
+  let badarg := raiseError state (.atom "badarg")
+  let unknown := unsupported s!"BIF erlang:{name}/{args.length}"
+  if !Value.publicList args then unsupported "BIF observation of opaque exception information"
+  else match name with
+  | "<" => match args with
+    | [.integer a, .integer b] => ret (boolean (decide (a < b)))
+    | _ => unknown
+  | ">" => match args with
+    | [.integer a, .integer b] => ret (boolean (decide (a > b)))
+    | _ => unknown
+  | ">=" => match args with
+    | [.integer a, .integer b] => ret (boolean (decide (a ≥ b)))
+    | _ => unknown
+  | "min" => match args with
+    | [.integer a, .integer b] => ret (.integer (if a ≤ b then a else b))
+    | _ => unknown
+  | "max" => match args with
+    | [.integer a, .integer b] => ret (.integer (if a ≤ b then b else a))
+    | _ => unknown
+  | "or" => match args with
+    | [.atom a, .atom b] =>
+      if (a == "true" || a == "false") && (b == "true" || b == "false") then
+        ret (boolean (a == "true" || b == "true"))
+      else badarg
+    | [_, _] => badarg
+    | _ => unknown
+  | "not" => match args with
+    | [.atom a] =>
+      if a == "true" || a == "false" then ret (boolean (a == "false")) else badarg
+    | [_] => badarg
+    | _ => unknown
+  -- OTP tests only the outer constructor here: for performance the BIF does
+  -- not verify that the tail is proper, so `is_list/1` reports true for an
+  -- improper list. `length/1` below does require a proper list.
+  | "is_list" => match args with
+    | [v] => ret (boolean (match v with | .nil => true | .cons _ _ => true | _ => false))
+    | _ => unknown
+  | "is_boolean" => match args with
+    | [v] => ret (boolean (match v with | .atom "true" | .atom "false" => true | _ => false))
+    | _ => unknown
+  | "is_float" => match args with
+    | [v] => ret (boolean (match v with | .floatBits _ => true | _ => false))
+    | _ => unknown
+  | "byte_size" => match args with
+    | [.bitstring bits] =>
+      if bits.length % 8 == 0 then ret (.integer (Int.ofNat (bits.length / 8))) else badarg
+    | [_] => badarg
+    | _ => unknown
+  | "length" => match args with
+    | [v] => match properLength v with
+      | some count => ret (.integer (Int.ofNat count))
+      | none => badarg
+    | _ => unknown
+  | "binary_to_list" => match args with
+    | [.bitstring bits] =>
+      if bits.length % 8 == 0 then
+        match decodeByteValues (bits.length / 8) bits with
+        | some values => ret (values.foldr Value.cons .nil)
+        | none => badarg
+      else badarg
+    | [_] => badarg
+    | _ => unknown
+  | "iolist_to_binary" => match args with
+    | [v] => match iolistValues v with
+      | some bits => ret (.bitstring bits)
+      | none => badarg
+    | _ => unknown
+  | _ => unknown
+
+/-- Explicit, intentionally small BIF profile. Other BIFs are model faults.
+    Integer comparisons use the linear integer order. Erlang's total term order
+    over every term kind is not modeled, so mixed or non-integer comparison
+    operands, and `min`/`max` outside the integer profile, remain model faults
+    rather than silently borrowed from the internal representation order. -/
 def builtin (state : LocalState) (name : String) (args : Values) :
     Transition LocalState Outcome :=
   let ret (value : Value) := nextControl state (.ret [value])
@@ -305,7 +431,7 @@ def builtin (state : LocalState) (name : String) (args : Values) :
   | "throw" => match args with
     | [reason] => nextControl state (.raise ⟨.throw, reason⟩)
     | _ => unknown
-  | _ => unknown
+  | _ => extendedBuiltin state name args
 
 def lookupFunction (world : CodeWorld) (moduleName name : String) (arity : Nat) :
     Option FunctionDef := do

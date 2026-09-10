@@ -604,6 +604,17 @@ theorem next_runtime_preserves (state after : LocalState) (name : String) (args 
     (transition : nextControl state (.runtime name args) = .next after) : LexicallyScoped after :=
   nextControl_preserves state after _ frames transition trivial
 
+theorem extendedBuiltin_preserves (state after : LocalState) (name : String) (args : Values)
+    (frames : StackScoped state.stack)
+    (transition : extendedBuiltin state name args = .next after) : LexicallyScoped after := by
+  unfold extendedBuiltin at transition
+  dsimp only [raiseError, unsupported, invalid] at transition
+  repeat' first
+    | with_reducible exact next_return_preserves state after _ frames transition
+    | with_reducible exact next_raise_preserves state after _ frames transition
+    | with_reducible exact halt_next_preserves after _ transition
+    | split at transition <;> try dsimp only [raiseError, unsupported, invalid] at transition
+
 theorem builtin_preserves (state after : LocalState) (name : String) (args : Values)
     (frames : StackScoped state.stack)
     (transition : builtin state name args = .next after) : LexicallyScoped after := by
@@ -611,6 +622,7 @@ theorem builtin_preserves (state after : LocalState) (name : String) (args : Val
   dsimp only [raiseError, unsupported, invalid] at transition
   repeat' first
     | with_reducible exact mapBuiltin_preserves state after _ _ frames transition
+    | with_reducible exact extendedBuiltin_preserves state after _ _ frames transition
     | with_reducible exact next_return_preserves state after _ frames transition
     | with_reducible exact next_raise_preserves state after _ frames transition
     | with_reducible exact next_runtime_preserves state after _ _ frames transition

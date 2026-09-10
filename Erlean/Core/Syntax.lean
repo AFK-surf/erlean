@@ -27,6 +27,11 @@ inductive Value where
   /-- Finite lexical captures and a recursive code-group descriptor. -/
   | closure (moduleName : String) (code : Nat) (captured : List (VarId × Value))
       (group : List (VarId × Nat))
+  /-- Ordered-iteration cursor over canonical map entries, already arranged in
+      the requested iteration order. A program passes it back to `maps:next/1`.
+      It is a runtime handle, not a term that equality or pattern matching is
+      expected to inspect, so it is never exactly comparable. -/
+  | iterator (remaining : List (MapKey × Value))
   /-- Opaque compiler exception information; never an observable Erlang term. -/
   | exceptionInfo (kind : String)
   deriving Repr
@@ -50,6 +55,7 @@ def Value.equal (left right : Value) : Bool :=
   | .function m f a, .function n g b => m == n && f == g && a == b
   | .closure m c env group, .closure n d other bindings =>
     m == n && c == d && group == bindings && Value.equalEnv env other
+  | .iterator a, .iterator b => Value.equalEntries a b
   | .exceptionInfo a, .exceptionInfo b => a == b
   | _, _ => false
 termination_by sizeOf left
@@ -131,6 +137,9 @@ def Value.isPublic (value : Value) : Bool :=
   | .cons head tail => head.isPublic && tail.isPublic
   | .tuple values => Value.publicList values
   | .map entries => Value.mapOrdered entries && Value.publicEntries entries
+  -- A cursor over public entries. Canonical key order is a property of maps,
+  -- not of cursors: a reversed cursor is deliberately in reverse order.
+  | .iterator entries => Value.publicEntries entries
   | .integer _ => true
   | .floatBits bits => FloatBits.isFinite bits
   | .atom _ => true
@@ -161,6 +170,7 @@ mutual
 def Value.exactComparable (value : Value) : Bool :=
   match value with
   | .exceptionInfo _ | .function _ _ _ | .closure _ _ _ _ | .floatBits _ => false
+  | .iterator _ => false
   | .cons head tail => head.exactComparable && tail.exactComparable
   | .tuple values => Value.comparableList values
   | .map entries => Value.mapOrdered entries && Value.comparableEntries entries

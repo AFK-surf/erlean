@@ -37,6 +37,7 @@ import Erlean.Examples.Dijkstra.Correctness
 #print axioms Erlean.Examples.Protocol.client_result_prefix
 #print axioms Erlean.Semantics.stepLocal_preserves_lexical_scope
 #print axioms Erlean.Semantics.runLocal_preserves_lexical_scope
+#print axioms Erlean.Semantics.extendedBuiltin_preserves
 #print axioms Erlean.Logic.seekBoundary_sound
 #print axioms Erlean.Semantics.initialCall_reachable_variable_not_unbound
 #print axioms Erlean.Runtime.initial_replay_cursorBounds

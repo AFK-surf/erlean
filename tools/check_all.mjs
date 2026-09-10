@@ -30,6 +30,7 @@ const fixtures = [
   'tests/fixtures/erlang/dijkstra',
   'tests/fixtures/erlang/maps',
   'tests/fixtures/erlang/float_transport',
+  'tests/fixtures/erlang/scalar_bifs',
   'tests/fixtures/elixir/identity',
   'tests/fixtures/gleam/identity',
 ];
@@ -67,6 +68,7 @@ run('OTP finite-map compatibility and error ordering', 'node', ['tools/check_map
 run('OTP finite-float payload transport', 'node', ['tools/check_float_transport.mjs']);
 run('OTP actor differential scenarios', 'node', ['tools/check_actors.mjs']);
 run('Dijkstra OTP and independent shortest-path checks', 'node', ['tools/check_dijkstra.mjs']);
+run('scalar and structural BIF OTP differential', 'node', ['tools/check_scalar_bifs.mjs']);
 
 for (const directory of fixtures) {
   const manifest = JSON.parse(readFileSync(`${directory}/manifest.json`));

@@ -20,7 +20,60 @@ The first end-to-end success criterion remains reproducible import, executable
 evaluation, an arbitrary-input contract, and differential execution for a module
 from each language. Sequential milestones precede actor-system verification.
 
-### Current work: list append semantics
+### Current work: extended BIF profile and ordered map iteration
+
+Extend the deliberately small BIF profile with the operations that imported code
+uses for ordering, boolean guards, structural tests, byte and element
+accounting, and ordered map traversal. The additions are:
+
+- integer comparisons `<`, `>`, and `>=`, alongside the retained `=<`;
+- integer `min/2` and `max/2`;
+- strict boolean `or/2` and `not/1`, alongside the retained `and/2`;
+- the structural predicates `is_list/1`, `is_boolean/1`, and `is_float/1`;
+- `byte_size/1`, `length/1`, `binary_to_list/1`, and `iolist_to_binary/1`;
+- `maps:keys/1`, `maps:values/1`, `maps:with/2`, `maps:iterator/2`, and
+  `maps:next/1`, with a new `Value.iterator` cursor over canonical entries.
+
+Design decision: the new arms live in a separate `extendedBuiltin` function that
+`builtin` calls as its fallback, rather than being added to `builtin` itself.
+The symbolic execution proofs in `Erlean.Examples` reduce `builtin` at every
+imported call site. Adding fourteen arms to that dispatch pushed
+`Erlean.Examples.Dijkstra.Expand` past its heartbeat limit, and moving the arms
+to the end of the dispatch did not help. Keeping them in a separate function
+restores the original cost: that module compiles in about one minute, matching
+its pre-change time. `Frames.extendedBuiltin_append` and
+`Preservation.extendedBuiltin_preserves` extend the existing frame and lexical
+scope laws to the new dispatch.
+
+Profiles and limits:
+
+- Comparisons and `min`/`max` stay integer-only. Erlang's total term order spans
+  every term kind; the representation order used for canonical map keys is a
+  different relation, so non-integer operands remain model faults rather than
+  borrowing it.
+- `is_list/1` tests only the outer constructor, matching OTP, which for
+  performance does not verify that the tail is proper. `length/1` does require a
+  proper list and raises `badarg` otherwise. The first implementation required a
+  proper list for `is_list/1`; the OTP differential corpus below caught the
+  divergence.
+- `maps:keys/1` and `maps:values/1` return canonical representation order. OTP
+  leaves map order unspecified, so these results are defined here but are not
+  differentially compared.
+- An iterator is a runtime cursor. It is public exactly when its entries are, it
+  is never exactly comparable, and the serialized CLI rejects it.
+
+Evidence: 43 OTP 29.0.6 differential results and 13 rejected inputs pass in
+`tools/check_scalar_bifs.mjs` against the retained `scalar_bifs` fixture, whose
+compiler provenance and reproducible export are checked like the other fixtures.
+`tests/semantics/Regression.lean` adds machine regressions for arities, error
+reasons, improper operands, out-of-profile comparisons, and the map cursor.
+`Erlean.Semantics.extendedBuiltin_preserves` is in the axiom audit and depends
+only on `propext`, `Classical.choice`, and `Quot.sound`.
+
+This extension does not claim OTP-complete BIF coverage, Erlang term ordering,
+floating-point arithmetic, or map iteration order compatibility with OTP.
+
+### Completed checkpoint: list append semantics
 
 Add the missing pure `erlang:'++'/2` operation. A proper left list is required.
 The right operand may be any public term, including an improper tail. Invalid
